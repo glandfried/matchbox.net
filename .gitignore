@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 .vscode/
 bin/ 
 obj/ 
@@ -5,3 +6,8 @@ GeneratedSource/
 src/bin/
 src/obj/
 InferNetWrapper/CsvMapping/
+=======
+*/GeneratedSource/
+*/bin/
+*/obj/
+>>>>>>> 7e2c842d54134b647af3832887cd75ce75a10c5e
