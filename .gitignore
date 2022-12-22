@@ -1,0 +1,7 @@
+.vscode/
+bin/ 
+obj/ 
+GeneratedSource/ 
+src/bin/
+src/obj/
+InferNetWrapper/CsvMapping/
