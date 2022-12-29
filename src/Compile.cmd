@@ -1,1 +1,1 @@
-dotnet publish -c ReleaseCore -o ../InfernetWrapper/CsvMapping ./CsvMapping.csproj
+dotnet publish -c ReleaseCore -o ../InfernetWrapper/MatchboxHelper ./MatchboxHelper.csproj

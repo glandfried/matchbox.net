@@ -2,22 +2,26 @@
 # The .NET Foundation licenses this file to you under the MIT license.
 # See the LICENSE file in the project root for more information.
 import sys
-sys.path.append(r"C:\Program Files\IronPython 2.7\Lib")
+import os
+import clr
+from System import Array, Double, Int32, Type, Converter
 import System
 from System import Console
 from System import Array
 from System import IO
-import clr
-import sys
+#from utils import plot_graph
 
-infernetpackagedir = System.IO.Path.GetDirectoryName(System.IO.FileInfo(__file__).FullName)
+netpackagedir = System.IO.Path.GetDirectoryName(System.IO.FileInfo(__file__).FullName)+"/MatchboxHelper"
+#sys.path.append(r'/opt/dotNet/libs')
+sys.path.append(netpackagedir)
 
 #add path to infer.net dlls .................................
-clr.AddReferenceToFileAndPath(infernetpackagedir+"\\CsvMapping\\CsvMapping.dll")
-clr.AddReferenceToFileAndPath(infernetpackagedir+"\\CsvMapping\\Microsoft.ML.Probabilistic.dll")
-clr.AddReferenceToFileAndPath(infernetpackagedir+"\\CsvMapping\\Microsoft.ML.Probabilistic.Compiler.dll")
-clr.AddReferenceToFileAndPath(infernetpackagedir+"\\CsvMapping\\Microsoft.ML.Probabilistic.Learners.dll")
-clr.AddReferenceToFileAndPath(infernetpackagedir+"\\CsvMapping\\Microsoft.ML.Probabilistic.Learners.Recommender.dll")
+clr.AddReference("Microsoft.ML.Probabilistic")
+clr.AddReference("Microsoft.ML.Probabilistic.Compiler")
+clr.AddReference("Microsoft.ML.Probabilistic.Learners")
+clr.AddReference("Microsoft.ML.Probabilistic.Learners.Recommender")
+clr.AddReference("MatchboxHelper")
+#clr.AddReference(os.path.normpath("./CsvMapping"))
 
 #---import all namespaces----------------
 import Microsoft.ML.Probabilistic
@@ -38,5 +42,5 @@ from Microsoft.ML.Probabilistic.Math import *
 import Microsoft.ML.Probabilistic.Learners
 from Microsoft.ML.Probabilistic.Learners import *
 
-import CsvMapping
-from CsvMapping import *
+import MatchboxHelper
+from MatchboxHelper import *

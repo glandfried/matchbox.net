@@ -4,7 +4,7 @@ from InfernetWrapper import *
 def matchbox():
     # Ejemplo de https://dotnet.github.io/infer/userguide/Learners/Matchbox%20recommender/Learner%20API.html
     dataMapping = CsvMapping()
-    recommender = Microsoft.ML.Probabilistic.Learners.MatchboxRecommender.Create(dataMapping)
+    recommender = MatchboxCsvWrapper.Create(dataMapping)
     # Settings: https://dotnet.github.io/infer/userguide/Learners/Matchbox/API/Setting%20up%20a%20recommender.html
     recommender.Settings.Training.TraitCount = 5;
     recommender.Settings.Training.IterationCount = 20;
