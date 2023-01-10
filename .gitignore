@@ -8,6 +8,7 @@
 !src/Compile.cmd
 !src/*.cs
 !src/*.csproj
-!matchbox.py
+!main.py
 !README.md
 !.gitignore
+!MatchboxImplementations.py
