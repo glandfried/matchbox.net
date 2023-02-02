@@ -2,7 +2,11 @@
 * 
 
 ## NOT IGNORED:
+!InfernetWrapper
+InfernetWrapper/*
 !InfernetWrapper/__init__.py
+!InfernetWrapper/MatchboxHelper
+InfernetWrapper/MatchboxHelper/*
 !InfernetWrapper/MatchboxHelper/*.dll
 !data/
 !src/Compile.cmd
