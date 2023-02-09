@@ -125,7 +125,7 @@ def infer_LightGBM(datasetName, ui, ts):
     X = df.iloc[:,:2].to_numpy()
     y = df.iloc[:,2].to_numpy()
 
-    model = LGBMClassifier(min_child_samples=1, verbose=True)
+    model = LGBMClassifier(min_child_samples=1, verbose=2)
     #https://tamaracucumides.medium.com/learning-to-rank-with-lightgbm-code-example-in-python-843bd7b44574
     query_train = [X.shape[0]]
     model.fit(X, y)
