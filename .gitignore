@@ -15,5 +15,5 @@ InfernetWrapper/MatchboxHelper/*
 !main.py
 !README.md
 !.gitignore
-!MatchboxImplementations.py
+!RatingPredictors.py
 !requirements.txt

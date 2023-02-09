@@ -1,12 +1,15 @@
 import InfernetWrapper
 from InfernetWrapper import *
-from tabnanny import verbose
+#from tabnanny import verbose
 from surprise import SVDpp, Dataset, Reader
 from surprise.model_selection import cross_validate
 from surprise.model_selection import split
-#import pandas as pd
-#from sklearn.ensemble import RandomForestClassifier
-#from sklearn.model_selection import train_test_split
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from lightgbm import LGBMRanker
+from lightgbm import LGBMClassifier
 #import matchbox_refactor as mbox
 
 class UserItemPair():
@@ -26,10 +29,13 @@ class EstimatedRating(UserItemPair):
         self.timestamp = timestamp
         super().__init__(user, item)
 
-def infer_dotnet_propio():
+def infer_matchbox_propio():
     MatchboxPropio.RecommenderSystem().Run()
 
-def infer_dotnet(datasetName, ui, ts, traitCount=5, iterationCount=20):
+def infer_matchboxnet(datasetName, ui, ts, traitCount=5, iterationCount=20):
+    # TODO: ver como hacer que tome timestamps, genere una historia que se itere en el tiempo
+
+    # Parametros a optimizar: cantidad de features, prior, 
     # Ejemplo de https://dotnet.github.io/infer/userguide/Learners/Matchbox%20recommender/Learner%20API.html
     dataMapping = CsvMapping()
     recommender = MatchboxCsvWrapper.Create(dataMapping)
@@ -92,9 +98,37 @@ def testRateOneAndPropagate(self):
     h.propagate()
     #h.addRating(r2, 1)
     print(f"Rating estimado para usuario {users[1].id} y pelicula {movies[1].id} es: {h.estimateRating(users[1], movies[1],5)}")
-
-def infer_RandomForest(datasetName, rating, n_estimators=200):
-    pd.read_csv(datasetName, )
-    rfc = RandomForestClassifier(n_estimators=n_estimators)
-    rfc.fit(X_train, y_train)
 """
+
+def infer_RandomForest(datasetName, ui, ts, n_estimators=10):
+    # TODO: agregar timestamp como feature, en los demas tb
+    df = pd.read_csv(datasetName, dtype="int", header=None)
+    """
+    pd.concat([df,pd.DataFrame([[rating.user, rating.item, rating.value, rating.timestamp]])])
+    X = df.iloc[:,:2]
+    y = df.iloc[:,2]
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1)
+    clf = RandomForestClassifier(random_state=1234, n_jobs=1, n_estimators=10, min_samples_split=2, min_samples_leaf=1, verbose=10)
+    clf.fit(X_train, y_train)
+    return clf.predict_proba(X_test)
+    """
+    X = df.iloc[:,:2].to_numpy()
+    y = df.iloc[:,2].to_numpy()
+    clf = RandomForestClassifier(random_state=1234, n_jobs=1, n_estimators=10, min_samples_split=2, min_samples_leaf=1, verbose=0)
+    clf.fit(X, y)
+    res = EstimatedRating(ui.user, ui.item, ts, clf.predict([[ui.user, ui.item]]))
+    res.posterior = clf.predict_proba([[ui.user, ui.item]])
+    return res
+
+def infer_LightGBM(datasetName, ui, ts):
+    df = pd.read_csv(datasetName, dtype="int", header=None)
+    X = df.iloc[:,:2].to_numpy()
+    y = df.iloc[:,2].to_numpy()
+
+    model = LGBMClassifier(min_child_samples=1, verbose=True)
+    #https://tamaracucumides.medium.com/learning-to-rank-with-lightgbm-code-example-in-python-843bd7b44574
+    query_train = [X.shape[0]]
+    model.fit(X, y)
+    res = EstimatedRating(ui.user, ui.item, ts, model.predict([[int(ui.user), int(ui.item)]]))
+    res.posterior = model.predict_proba([[int(ui.user), int(ui.item)]])
+    return res
