@@ -9,6 +9,7 @@ InfernetWrapper/*
 InfernetWrapper/MatchboxHelper/*
 !InfernetWrapper/MatchboxHelper/*.dll
 !data/
+data/ml-100k/*
 !src/Compile.cmd
 !src/*.cs
 !src/*.csproj

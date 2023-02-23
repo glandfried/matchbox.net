@@ -4,13 +4,17 @@ from InfernetWrapper import *
 from surprise import SVDpp, Dataset, Reader
 from surprise.model_selection import cross_validate
 from surprise.model_selection import split
+from surprise.accuracy import rmse
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
+from sklearn.model_selection import cross_val_score
 from lightgbm import LGBMRanker
 from lightgbm import LGBMClassifier
 #import matchbox_refactor as mbox
+
+SEPARATOR = ","
 
 class UserItemPair():
     def __init__(self, user, item):
@@ -29,6 +33,10 @@ class EstimatedRating(UserItemPair):
         self.timestamp = timestamp
         super().__init__(user, item)
 
+class Res():
+    def __init__(self, estimate):
+        self.est = estimate
+
 def infer_matchbox_propio():
     MatchboxPropio.RecommenderSystem().Run()
 
@@ -37,7 +45,7 @@ def infer_matchboxnet(datasetName, ui, ts, traitCount=5, iterationCount=20):
 
     # Parametros a optimizar: cantidad de features, prior, 
     # Ejemplo de https://dotnet.github.io/infer/userguide/Learners/Matchbox%20recommender/Learner%20API.html
-    dataMapping = CsvMapping()
+    dataMapping = CsvMapping(SEPARATOR)
     recommender = MatchboxCsvWrapper.Create(dataMapping)
     # Settings: https://dotnet.github.io/infer/userguide/Learners/Matchbox/API/Setting%20up%20a%20recommender.html
     recommender.Settings.Training.TraitCount = traitCount;
@@ -52,7 +60,7 @@ def infer_matchboxnet(datasetName, ui, ts, traitCount=5, iterationCount=20):
     #recommendations = recommender.Recommend(rating.user, 10);
     #print(",".join(map(str,recommendations)));
     res = EstimatedRating(ui.user, ui.item, ts, predRating)
-    res.posterior = posterior
+    res.posterior = {i.Key:i.Value for i in posterior} #Convert dotnet SortedDictionary to python dict
     return res
     '''
     print("Imple dotnet:")
@@ -65,44 +73,27 @@ def infer_matchboxnet(datasetName, ui, ts, traitCount=5, iterationCount=20):
 
 # https://surprise.readthedocs.io/en/stable/getting_started.html#use-a-custom-dataset
 def infer_SVDpp(datasetName, ui, ts):
-    reader = Reader(line_format="user item rating timestamp", sep=",", rating_scale=(1,5))
+    reader = Reader(line_format="user item rating timestamp", sep=SEPARATOR, rating_scale=(1,5))
     algo = SVDpp()
     data = Dataset.load_from_file(datasetName, reader=reader).build_full_trainset()
-    algo.fit(data)
 
+    algo.fit(data)
     #trainset, testset = split.train_test_split(data, test_size=0.25)
-    #predictions = algo.fit(trainset).test(testset)
+    #result = Res(algo.fit(trainset).test(testset))
+    
     if isinstance(ui, ObservedRating):
         p = algo.predict(ui.user,ui.item, r_ui=ui.value)
     else:
         p = algo.predict(ui.user,ui.item)
-    return p
-
-"""
-def testRateOneAndPropagate(self):
-    plotRatings = False
-    h = self.defaultHistory()
-    users = self.createUsers(2, 2)
-    movies = self.createMovies(2, 2)
-
-    print(f"Rating estimado para usuario {users[1].id} y pelicula {movies[1].id} es: {h.estimateRating(users[1], movies[1],5)}")
-    r0_0 = mbox.Rating(users[0], movies[0], 5, plotRatings=plotRatings)
-    print(f"Rating estimado para usuario {users[1].id} y pelicula {movies[1].id} es: {h.estimateRating(users[1], movies[1],5)}")
-    r0_1 = mbox.Rating(users[0], movies[1], -5, plotRatings=plotRatings)
-    print(f"Rating estimado para usuario {users[1].id} y pelicula {movies[1].id} es: {h.estimateRating(users[1], movies[1],5)}")
-    r1_0 = mbox.Rating(users[1], movies[0], 5, plotRatings=plotRatings)
-    h.addRating(r0_0, t=1)
-    h.addRating(r0_1, t=2)
-    h.addRating(r1_0, t=3)
     
-    h.propagate()
-    #h.addRating(r2, 1)
-    print(f"Rating estimado para usuario {users[1].id} y pelicula {movies[1].id} es: {h.estimateRating(users[1], movies[1],5)}")
-"""
+    result = EstimatedRating(p.uid, p.iid, estimate=p.est)
+    result.accuracy = rmse(p.est)
+    result.evidence = None   # couldn't find a way to get evidence for surprise impl of SVDpp
+    return result
 
 def infer_RandomForest(datasetName, ui, ts, n_estimators=10):
     # TODO: agregar timestamp como feature, en los demas tb
-    df = pd.read_csv(datasetName, dtype="int", header=None)
+    df = pd.read_csv(datasetName, dtype="int", header=None, sep=SEPARATOR)
     """
     pd.concat([df,pd.DataFrame([[rating.user, rating.item, rating.value, rating.timestamp]])])
     X = df.iloc[:,:2]
@@ -121,7 +112,7 @@ def infer_RandomForest(datasetName, ui, ts, n_estimators=10):
     return res
 
 def infer_LightGBM(datasetName, ui, ts):
-    df = pd.read_csv(datasetName, dtype="int", header=None)
+    df = pd.read_csv(datasetName, dtype="int", header=None, sep=SEPARATOR)
     X = df.iloc[:,:2].to_numpy()
     y = df.iloc[:,2].to_numpy()
 
