@@ -133,15 +133,11 @@ def infer_RandomForest(ttsi, n_estimators=10):
     score = sklearn.metrics.log_loss(y_test, y_pred_proba, labels=clf.classes_)
     return {"rmse":rmse, "cross-entropy":score}
 
-def infer_LightGBM(datasetName, ui, ts):
-    df = pd.read_csv(datasetName, dtype="int", header=None, sep=SEPARATOR)
-    X = df.iloc[:,:2].to_numpy()
-    y = df.iloc[:,2].to_numpy()
-
-    model = LGBMClassifier(min_child_samples=1, verbose=2)
-    #https://tamaracucumides.medium.com/learning-to-rank-with-lightgbm-code-example-in-python-843bd7b44574
-    query_train = [X.shape[0]]
-    model.fit(X, y)
-    res = EstimatedRating(ui.user, ui.item, ts, model.predict([[int(ui.user), int(ui.item)]]))
-    res.posterior = model.predict_proba([[int(ui.user), int(ui.item)]])
-    return res
+def infer_LGBM(ttsi, n_estimators=10):
+    X_train, X_test, y_train, y_test = ttsi.get()
+    clf = LGBMClassifier(min_child_samples=1, verbose=-1).fit(X_train,y_train)
+    y_pred = clf.predict(X_test)
+    y_pred_proba = clf.predict_proba(X_test)
+    rmse = sklearn.metrics.mean_squared_error(y_test, y_pred)
+    score = sklearn.metrics.log_loss(y_test, y_pred_proba, labels=clf.classes_)
+    return {"rmse":rmse, "cross-entropy":score}
