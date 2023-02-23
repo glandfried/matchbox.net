@@ -7,15 +7,12 @@ from surprise.model_selection import split
 from surprise.accuracy import rmse
 import pandas as pd
 import numpy as np
+from sklearn.naive_bayes import GaussianNB
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import cross_validate as sklearn_cross_validate
-from sklearn.model_selection import cross_val_score
-from sklearn.model_selection import cross_val_predict
 import sklearn.metrics
-from sklearn.metrics import accuracy_score
 from sklearn.metrics import make_scorer
-from lightgbm import LGBMRanker
 from lightgbm import LGBMClassifier
 #import matchbox_refactor as mbox
 
@@ -110,15 +107,6 @@ def infer_SVDpp(datasetName, ui, ts):
     result.evidence = None   # couldn't find a way to get evidence for surprise impl of SVDpp
     return result
 
-def evidence_and_acc(clf, y_true, y_pred):
-    classes = clf.classes_
-    idx_max_pred = np.argmax(y_pred, axis=1)
-    labels = [classes[i] for i in labels]
-    accu = accuracy_score(y_true, labels)
-
-    evidence = np.prod(np.amax(y_pred, axis=1))
-    return {"accuracy":accu, "evidence":evidence}
-
 def evidence(y_true, y_pred, estimator):
     classes = estimator.classes_
     y_true_idx = [classes.index(i) for i in y_true]
@@ -127,6 +115,15 @@ def evidence(y_true, y_pred, estimator):
 def infer_RandomForest(ttsi, n_estimators=10):
     X_train, X_test, y_train, y_test = ttsi.get()
     clf = RandomForestClassifier(random_state=1234, n_jobs=1, n_estimators=10, min_samples_split=2, min_samples_leaf=1, verbose=0).fit(X_train,y_train)
+    y_pred = clf.predict(X_test)
+    y_pred_proba = clf.predict_proba(X_test)
+    rmse = sklearn.metrics.mean_squared_error(y_test, y_pred)
+    score = sklearn.metrics.log_loss(y_test, y_pred_proba, labels=clf.classes_)
+    return {"rmse":rmse, "cross-entropy":score}
+
+def infer_NaiveBayes(ttsi):
+    X_train, X_test, y_train, y_test = ttsi.get()
+    clf = GaussianNB().fit(X_train,y_train)
     y_pred = clf.predict(X_test)
     y_pred_proba = clf.predict_proba(X_test)
     rmse = sklearn.metrics.mean_squared_error(y_test, y_pred)
