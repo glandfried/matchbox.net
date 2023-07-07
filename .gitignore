@@ -10,7 +10,7 @@ InfernetWrapper/MatchboxHelper/*
 !InfernetWrapper/MatchboxHelper/*.dll
 !data/
 data/ml-100k/*
-!src/Compile.cmd
+!src/
 !src/*.cs
 !src/*.csproj
 !main.py

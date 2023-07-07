@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Extend Learners Mappings with CSV input mapping</Description>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <PackageId>MatchboxHelper</PackageId>
+    <NoWarn>1591</NoWarn>
+    <Configurations>Debug;Release</Configurations>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.ML.Probabilistic" Version="0.4.2301.301" />
+    <PackageReference Include="Microsoft.ML.Probabilistic.Compiler" Version="0.4.2203.202" />
+    <PackageReference Include="Microsoft.ML.Probabilistic.Learners" Version="0.4.2203.202" />
+  </ItemGroup>
+</Project>
