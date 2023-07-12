@@ -16,6 +16,10 @@ from sklearn.metrics import make_scorer
 from lightgbm import LGBMClassifier
 #import matchbox_refactor as mbox
 import tqdm
+from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
+from time import time
+import matplotlib.pyplot as plt
+from datetime import datetime
 
 SEPARATOR = ","
 
@@ -125,7 +129,7 @@ def infer_matchboxnet(ttsi, traitCount=5, iterationCount=20):
     score_manual = evidence(y_test, y_pred_proba, labels=[1,2,3,4,5])
     #posterior = recommender.PredictDistribution(ui.user, ui.item);
     #predRating = recommender.Predict(ui.user, ui.item);
-    return {"rmse":rmse, "cross-entropy":score, "manual cross-entropy":score_manual}
+    return {"rmse":rmse, "cross-entropy":score}
 
 # https://surprise.readthedocs.io/en/stable/getting_started.html#use-a-custom-dataset
 def infer_SVDpp(datasetName, ui, ts):
@@ -160,13 +164,13 @@ def infer_SVDpp(ttsi):
 
 def infer_RandomForest(ttsi, n_estimators=100):
     X_train, X_test, y_train, y_test = ttsi.get()
-    clf = RandomForestClassifier(random_state=1234, n_jobs=1, n_estimators=n_estimators, min_samples_split=2, min_samples_leaf=1, verbose=0).fit(X_train,y_train)
+    clf = RandomForestClassifier(random_state=1234, n_jobs=1, verbose=0, n_estimators=n_estimators, min_samples_split=2, min_samples_leaf=1).fit(X_train,y_train)
     y_pred = clf.predict(X_test)
     y_pred_proba = clf.predict_proba(X_test)
     rmse = sklearn.metrics.mean_squared_error(y_test, y_pred)
     score = sklearn.metrics.log_loss(y_test, y_pred_proba, labels=clf.classes_)
     score_manual = evidence(y_test, y_pred_proba, labels=[1,2,3,4,5])
-    return {"rmse":rmse, "cross-entropy":score, "manual cross-entropy":score_manual}
+    return {"rmse":rmse, "cross-entropy":score}
 
 def infer_NaiveBayes(ttsi):
     X_train, X_test, y_train, y_test = ttsi.get()
@@ -177,12 +181,138 @@ def infer_NaiveBayes(ttsi):
     score = sklearn.metrics.log_loss(y_test, y_pred_proba, labels=clf.classes_)
     return {"rmse":rmse, "cross-entropy":score}
 
-def infer_LGBM(ttsi, n_estimators=100):
-    X_train, X_test, y_train, y_test = ttsi.get()
-    clf = LGBMClassifier(random_state = 1234, min_child_samples=1, n_estimators=n_estimators, verbose=-1).fit(X_train,y_train)
-    y_pred = clf.predict(X_test)
-    y_pred_proba = clf.predict_proba(X_test)
-    rmse = sklearn.metrics.mean_squared_error(y_test, y_pred)
-    score = sklearn.metrics.log_loss(y_test, y_pred_proba, labels=clf.classes_)
-    score_manual = evidence(y_test, y_pred_proba, labels=[1,2,3,4,5])
-    return {"rmse":rmse, "cross-entropy":score, "manual cross-entropy":score_manual}
+def infer_LGBM(ttsi, params={"n_estimators":100, "min_child_samples":1}):
+    pass
+
+class Recommender():
+    def __init__(self, ttsi: TrainTestSplitInstance, space: dict=None):
+        self.ttsi = ttsi
+        self.space = space if space is not None else self.defaultSpace()
+    def setSpace(self, space: dict) -> None:
+        """Set parameter space for trials."""
+        self.space = space
+    def bestCandidates(self):
+        """Perform trials over parameter space and return best candidates."""
+        trials = Trials()
+        best = fmin(lambda x: self.objective(x), self.space, algo=tpe.suggest, max_evals=16, trials=trials)
+        return self._formatOutput(trials)
+    def _formatOutput(self, trials):
+        def flatten(doc, pref=''):
+            res = {}
+            for k, v in doc.items():
+                k = f'{pref}.{k}' if pref else k
+                if isinstance(v, dict):
+                    res.update(flatten(v, k))
+                else:
+                    res[k] = v
+            return res
+        df = pd.DataFrame(list(map(flatten, [e['result'] for e in trials.trials])))
+        return df.sort_values('loss')
+    def plotOverfitting(self, df, name=None):
+        if name is None:
+            name = self.name() + "_" + datetime.today().strftime('%Y%m%d_%H-%M-%S')
+        plt.figure(figsize=(8,6))
+        plt.scatter(df.tr_loss, df.loss, c=(df.loss-df.tr_loss)/df.loss*100)
+        plt.title('Comparison of training and dev losses.\n Color corresponds to overfitting percentage')
+        plt.colorbar()
+        m = min(df.tr_loss.min(), df.loss.min())
+        M = max(df.tr_loss.max(), df.loss.max())
+        plt.plot([m, M], [m, M], 'k--')
+        plt.xlabel('tr loss')
+        plt.ylabel('dev loss')
+        plt.grid()
+        plt.savefig(f"./figs/{name}.png")
+    def champion(self, df:pd.DataFrame) -> pd.DataFrame:
+        """Candidate(s) that overfits the least out of best candidates."""
+        return df[df.loss < df.loss.min() * 1.001].sort_values('tr_loss', ascending=False).head(30)
+    def name(self) -> str:
+        """Readable name of recommender algorithm."""
+        raise NotImplementedError("Subclasses should implement this")
+    def defaultSpace(self) -> dict:
+        """Default parameter space for trials."""
+        raise NotImplementedError("Subclasses should implement this")
+    def objective(self, params: dict) -> dict:
+        """Function to call on every trial. 
+           Return dictionary must include status and loss (metric to optimize)."""
+        raise NotImplementedError("Subclasses should implement this")
+
+class LGBM(Recommender):
+    def name(self) -> str:
+        return "LGBM"
+    def defaultSpace(self) -> dict:
+        return {
+            #'boosting_type' : hp.choice('boosting_type', ["gbdt", "rf"]),
+            'n_estimators': hp.quniform('n_estimators', 100, 500, 100),
+            "num_iterations": hp.choice("num_iterations", [100]),
+            #'bagging_freq' : hp.choice('bagging_freq', range(10, 300, 10)),
+            'subsample': hp.quniform('subsample', 0.7, 0.90, 0.02),
+            #'objective': hp.choice('objective', ["regression", "regression_l1"]),
+            'learning_rate': hp.qloguniform('learning_rate', np.log(0.04), np.log(0.17), 0.01),
+            #'reg_alpha': hp.choice('ra', [0, hp.quniform('reg_alpha', 0.01, 0.1, 0.01)]),
+            #'reg_lambda': hp.choice('rl', [0, hp.quniform('reg_lambda', 0.01, 0.1, 0.01)]),
+        }
+    def objective(self, params: dict) -> dict:
+        params['n_estimators'] = int(params['n_estimators'])
+        params['num_iterations'] = int(params['num_iterations'])
+        X_train, X_test, y_train, y_test = self.ttsi.get()
+        t0 = time()
+        clf = LGBMClassifier(random_state = 1234, verbose=-1, **params).fit(X_train,y_train)
+        train_time = time() - t0
+        y_pred = clf.predict(X_test)
+        y_pred_proba = clf.predict_proba(X_test)
+        y_train_pred_proba = clf.predict_proba(X_train)
+        rmse = sklearn.metrics.mean_squared_error(y_test, y_pred)
+        score = sklearn.metrics.log_loss(y_test, y_pred_proba, labels=clf.classes_)
+        score_train = sklearn.metrics.log_loss(y_train, y_train_pred_proba, labels=clf.classes_)
+        return dict(
+            rmse=rmse,
+            loss=score, 
+            tr_loss=score_train,
+            params=params,
+            train_time=train_time,
+            status=STATUS_OK
+        )
+
+
+"""
+def objective(params):
+    params['n_estimators'] = int(params['n_estimators'])
+    print(params)
+    cuts = [params['cut_publishers'], params['cut_developers'], params['cut_categories'], params['cut_tags']]
+    pipe = make_pipeline(
+        create_a_steam_pipe(cuts, params['n_components']),
+        lgb.LGBMRegressor(random_state=42, **params)
+    )
+    t0 = time()
+    pipe.fit(X_train, y_train)
+    train_time = time() - t0
+    loss=rmse(y_dev, pipe.predict(X_dev))
+    print(f'loss {loss:.02f}')
+    return dict(
+        loss=loss,
+        tr_loss=rmse(y_train, pipe.predict(X_train)), 
+        params=params,
+        train_time=train_time,
+        status=STATUS_OK
+    )
+
+space = {
+    'cut_publishers' : hp.choice('cut_publishers', [80,85,90,95,99]),
+    'cut_developers' : hp.choice('cut_developers', [80,85,90,95,99]),
+    'cut_categories' : hp.choice('cut_categories', [30,35,40,45,50,55,60,65]),
+    'cut_tags' : hp.choice('cut_tags', [30,35,40,45,50,55,60,65]),
+    'n_components' : hp.choice('n_components', [60,70,80,90,100,110,120,130]),
+    #'boosting_type' : hp.choice('boosting_type', ["gbdt", "rf"]),
+    'n_estimators': hp.quniform('n_estimators', 200, 500, 10),
+    #'bagging_freq' : hp.choice('bagging_freq', range(10, 300, 10)),
+    'subsample': hp.quniform('subsample', 0.7, 0.90, 0.02),
+    #'objective': hp.choice('objective', ["regression", "regression_l1"]),
+    'learning_rate': hp.qloguniform('learning_rate', np.log(0.04), np.log(0.17), 0.01),
+    #'reg_alpha': hp.choice('ra', [0, hp.quniform('reg_alpha', 0.01, 0.1, 0.01)]),
+    #'reg_lambda': hp.choice('rl', [0, hp.quniform('reg_lambda', 0.01, 0.1, 0.01)]),
+}
+
+trials = Trials()
+
+best = fmin(objective, space, algo=tpe.suggest, max_evals=16, trials=trials)
+"""
