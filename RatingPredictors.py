@@ -1,10 +1,12 @@
-import InfernetWrapper
-from InfernetWrapper import *
+#import InfernetWrapper
+#from InfernetWrapper import *
 #from tabnanny import verbose
+"""
 from surprise import SVDpp, Dataset, Reader
 from surprise.model_selection import cross_validate as surprise_cross_validate
 from surprise.model_selection import split
 from surprise.accuracy import rmse
+"""
 import pandas as pd
 import numpy as np
 from sklearn.naive_bayes import GaussianNB
@@ -22,6 +24,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 
 SEPARATOR = ","
+NROWS = 10000
 
 class UserItemPair():
     def __init__(self, user, item):
@@ -46,7 +49,10 @@ class Res():
 
 class TrainTestSplitInstance():
     def __init__(self, datasetName):
-        df = pd.read_csv(datasetName, dtype="int", header=None, sep=SEPARATOR)
+        #df = pd.read_csv(datasetName, dtype="int", header=None, sep=SEPARATOR)
+        df = pd.read_csv(datasetName, sep=SEPARATOR)
+        df = df.head(NROWS)
+        df["rating"] = df["rating"].round(0).astype(int)
         X = df.iloc[:,[0,1,3]]
         y = df.iloc[:,2]
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=0)
@@ -195,7 +201,10 @@ class Recommender():
         """Perform trials over parameter space and return best candidates."""
         trials = Trials()
         best = fmin(lambda x: self.objective(x), self.space, algo=tpe.suggest, max_evals=16, trials=trials)
-        return self._formatOutput(trials)
+        best = self._formatOutput(trials)
+        best["geo_mean"] = np.exp(-best["loss"]) #prediccion promedio, porque si en una productoria de las predicciones reemplazas todas las preds por el valor de la media geometrica, sale este
+        best["geo_mean_tr"] = np.exp(-best["tr_loss"])
+        return best
     def _formatOutput(self, trials):
         def flatten(doc, pref=''):
             res = {}
