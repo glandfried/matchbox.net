@@ -195,18 +195,26 @@ class Recommender():
     def __init__(self, ttsi: TrainTestSplitInstance, space: dict=None):
         self.ttsi = ttsi
         self.space = space if space is not None else self.defaultSpace()
+
+    def resultsName(self) -> str:
+        """Root name used for results file of this recommender instance."""
+        return self.name() + "_" + datetime.today().strftime('%Y%m%d_%H-%M-%S')
+
     def setSpace(self, space: dict) -> None:
         """Set parameter space for trials."""
         self.space = space
+
     def bestCandidates(self):
         """Perform trials over parameter space and return best candidates."""
         trials = Trials()
         best = fmin(lambda x: self.objective(x), self.space, algo=tpe.suggest, max_evals=16, trials=trials)
         best = self._formatOutput(trials)
         best["geo_mean"] = np.exp(-best["loss"]) #prediccion promedio, porque si en una productoria de las predicciones reemplazas todas las preds por el valor de la media geometrica, sale este
-        #if "tr_loss" in best.cols:
-        best["geo_mean_tr"] = np.exp(-best["tr_loss"])
+        if "tr_loss" in best.columns:
+            best["geo_mean_tr"] = np.exp(-best["tr_loss"])
+        best.to_csv(f"./trials/{self.name()}_{datetime.today().strftime('%Y%m%d_%H-%M-%S')}.csv", header=True, index=False)
         return best
+    
     def _formatOutput(self, trials):
         def flatten(doc, pref=''):
             res = {}
@@ -219,29 +227,66 @@ class Recommender():
             return res
         df = pd.DataFrame(list(map(flatten, [e['result'] for e in trials.trials])))
         return df.sort_values('loss')
-    def plotOverfitting(self, df, name=None):
-        if name is None:
-            name = self.name() + "_" + datetime.today().strftime('%Y%m%d_%H-%M-%S')
+    
+    def champion(self, df:pd.DataFrame) -> pd.DataFrame:
+        """Candidate(s) that overfits the least out of best candidates."""
+        return df[df.loss < df.loss.min() * 1.001].sort_values('tr_loss', ascending=False).head(30)
+    
+    def plotOverfitting(self, best, name=None):
+        name = name if name is not None else self.resultsName
         plt.figure(figsize=(8,6))
-        plt.scatter(df.tr_loss, df.loss, c=(df.loss-df.tr_loss)/df.loss*100)
+        plt.scatter(best.tr_loss, best.loss, c=(best.loss-best.tr_loss)/best.loss*100)
         plt.title('Comparison of training and dev losses.\n Color corresponds to overfitting percentage')
         plt.colorbar()
-        m = min(df.tr_loss.min(), df.loss.min())
-        M = max(df.tr_loss.max(), df.loss.max())
+        m = min(best.tr_loss.min(), best.loss.min())
+        M = max(best.tr_loss.max(), best.loss.max())
         plt.plot([m, M], [m, M], 'k--')
         plt.xlabel('tr loss')
         plt.ylabel('dev loss')
         plt.grid()
         plt.savefig(f"./figs/{name}.png")
-    def champion(self, df:pd.DataFrame) -> pd.DataFrame:
-        """Candidate(s) that overfits the least out of best candidates."""
-        return df[df.loss < df.loss.min() * 1.001].sort_values('tr_loss', ascending=False).head(30)
+
+    def plotParamDistribution(self, best, name=None):
+        name = name if name is not None else self.resultsName
+        cut_point = best.loss.median()
+        best_models_df = best[best.loss <= cut_point]
+        worst_models_df = best[best.loss > cut_point]
+        def visualize_param(param_name):
+            s = best[f'params.{param_name}']
+            if s.dtype.name == 'object':
+                visualize_categorical_param(param_name)
+            else: # assume numerical
+                visualize_numerical_param(param_name)
+
+        def visualize_categorical_param(param_name):
+            pd.concat([
+                best_models_df[f'params.{param_name}'].value_counts().rename('best'),
+                worst_models_df[f'params.{param_name}'].value_counts().rename('worst')
+            ], axis=1).plot.bar()
+
+        def visualize_numerical_param(param_name):
+            plt.violinplot([
+                best_models_df[f'params.{param_name}'],
+                worst_models_df[f'params.{param_name}']
+            ])
+            plt.xticks([1, 2], ['best', 'worst'])
+        
+        param_names = list(self.space.keys())
+        for param_name in param_names:
+            plt.figure()
+            visualize_param(param_name)
+            plt.title(param_name)
+            plt.tight_layout()
+            plt.savefig(f"./figs/{name}_{param_name}.png")
+    
     def name(self) -> str:
         """Readable name of recommender algorithm."""
         raise NotImplementedError("Subclasses should implement this")
+    
     def defaultSpace(self) -> dict:
         """Default parameter space for trials."""
         raise NotImplementedError("Subclasses should implement this")
+    
     def objective(self, params: dict) -> dict:
         """Function to call on every trial. 
            Return dictionary must include status and loss (metric to optimize)."""
