@@ -1,6 +1,6 @@
 import RatingPredictors
 
-dataset = "./data/MovieLens/data_50.csv"
+dataset = "./data/MovieLens/ratings.csv"
 ttsi = RatingPredictors.TrainTestSplitInstance(dataset)
 #ttsi.to_csv(ttsi)
 
