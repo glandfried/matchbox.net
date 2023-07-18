@@ -20,6 +20,7 @@ from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
 from time import time
 import matplotlib.pyplot as plt
 from datetime import datetime
+import os
 
 SEPARATOR = ","
 NROWS = 10000
@@ -49,9 +50,9 @@ class TrainTestSplitInstance():
     def __init__(self, datasetName):
         self.path = datasetName
         #df = pd.read_csv(datasetName, dtype="int", header=None, sep=SEPARATOR)
-        df = pd.read_csv(datasetName, sep=SEPARATOR)
-        df = df.head(NROWS)
+        df = pd.read_csv(datasetName, sep=SEPARATOR, nrows=NROWS)
         df["rating"] = df["rating"].round(0).astype(int)
+        df = df.reindex(columns=["userId","movieId","rating","timestamp"])
         X = df.iloc[:,[0,1,3]]
         y = df.iloc[:,2]
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=0)
@@ -59,6 +60,7 @@ class TrainTestSplitInstance():
         self.X_test = X_test
         self.y_train = y_train
         self.y_test = y_test
+        self.to_csv()
 
     def get(self):
         return self.X_train, self.X_test, self.y_train, self.y_test
@@ -71,10 +73,10 @@ class TrainTestSplitInstance():
 
     def to_csv(self):
         dfTrain = pd.concat([self.X_train, self.y_train], axis=1, sort=False)
-        dfTrain = dfTrain.reindex(columns=[0,1,2,3])
+        dfTrain = dfTrain.reindex(columns=["userId","movieId","rating","timestamp"])
         dfTrain.to_csv(self.trainCsvPath(), header=False, index=False)
         dfTest = pd.concat([self.X_test, self.y_test], axis=1, sort=False)
-        dfTest = dfTest.reindex(columns=[0,1,2,3])
+        dfTest = dfTest.reindex(columns=["userId","movieId","rating","timestamp"])
         dfTest.to_csv(self.testCsvPath(), header=False, index=False)
 
 def infer_matchbox_propio():
@@ -167,12 +169,6 @@ def evidence(y_true, y_pred_proba, labels):
     #return np.prod([y_pred_proba[i][y_true_idx[i]] for i in range(len(y_pred_proba))])
     return -np.sum([np.log(y_pred_proba[i][y_true_idx[i]]) for i in range(len(y_pred_proba))])/len(y_pred_proba)
 
-def infer_SVDpp(ttsi):
-    X_train, X_test, y_train, y_test = ttsi.get() 
-    reader = Reader(line_format="user item rating timestamp", sep=SEPARATOR, rating_scale=(1,5))
-    algo = SVDpp()
-    algo.fit()
-
 def infer_RandomForest(ttsi, n_estimators=100):
     X_train, X_test, y_train, y_test = ttsi.get()
     clf = RandomForestClassifier(random_state=1234, n_jobs=1, verbose=0, n_estimators=n_estimators, min_samples_split=2, min_samples_leaf=1).fit(X_train,y_train)
@@ -208,6 +204,7 @@ class Recommender():
         best = fmin(lambda x: self.objective(x), self.space, algo=tpe.suggest, max_evals=16, trials=trials)
         best = self._formatOutput(trials)
         best["geo_mean"] = np.exp(-best["loss"]) #prediccion promedio, porque si en una productoria de las predicciones reemplazas todas las preds por el valor de la media geometrica, sale este
+        #if "tr_loss" in best.cols:
         best["geo_mean_tr"] = np.exp(-best["tr_loss"])
         return best
     def _formatOutput(self, trials):

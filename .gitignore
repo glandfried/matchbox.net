@@ -8,8 +8,6 @@ InfernetWrapper/*
 !InfernetWrapper/MatchboxHelper
 InfernetWrapper/MatchboxHelper/*
 !InfernetWrapper/MatchboxHelper/*.dll
-!data/
-data/ml-100k/*
 !src/
 !src/*.cs
 !src/*.csproj
