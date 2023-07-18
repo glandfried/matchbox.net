@@ -46,6 +46,7 @@ class Res():
 
 class TrainTestSplitInstance():
     def __init__(self, datasetName):
+        self.path = datasetName
         df = pd.read_csv(datasetName, dtype="int", header=None, sep=SEPARATOR)
         X = df.iloc[:,[0,1,3]]
         y = df.iloc[:,2]
@@ -58,13 +59,19 @@ class TrainTestSplitInstance():
     def get(self):
         return self.X_train, self.X_test, self.y_train, self.y_test
 
+    def trainCsvPath(self):
+        return f"{self.path[:-4]}_train.csv"
+    
+    def testCsvPath(self):
+        return f"{self.path[:-4]}_test.csv"
+
     def to_csv(self):
         dfTrain = pd.concat([self.X_train, self.y_train], axis=1, sort=False)
         dfTrain = dfTrain.reindex(columns=[0,1,2,3])
-        dfTrain.to_csv('data/MovieLens/data_50_train.csv', header=False, index=False)
+        dfTrain.to_csv(self.trainCsvPath(), header=False, index=False)
         dfTest = pd.concat([self.X_test, self.y_test], axis=1, sort=False)
         dfTest = dfTest.reindex(columns=[0,1,2,3])
-        dfTest.to_csv('data/MovieLens/data_50_test.csv', header=False, index=False)
+        dfTest.to_csv(self.testCsvPath(), header=False, index=False)
 
 def infer_matchbox_propio():
     MatchboxPropio.RecommenderSystem().Run()
@@ -273,6 +280,46 @@ class LGBM(Recommender):
             status=STATUS_OK
         )
 
+class Matchbox(Recommender):
+    def name(self) -> str:
+        return "Matchbox"
+    def defaultSpace(self) -> dict:
+        return {
+            "traitCount" :  hp.quniform('traitCount', 5, 15, 1),
+            "iterationCount" : hp.quniform('iterationCount', 10, 30, 10)
+        }
+    def objective(self, params: dict) -> dict:
+        # TODO: refactor with batch operations
+        dataMapping = CsvMapping(SEPARATOR)
+        recommender = MatchboxCsvWrapper.Create(dataMapping)
+        # Settings: https://dotnet.github.io/infer/userguide/Learners/Matchbox/API/Setting%20up%20a%20recommender.html
+        recommender.Settings.Training.TraitCount = int(params["traitCount"])
+        recommender.Settings.Training.IterationCount = int(params["iterationCount"])
+        t0 = time()
+        recommender.Train(self.ttsi.trainCsvPath());
+        train_time = time() - t0
+        
+        y_pred = []
+        y_pred_proba = []
+        _, X_test, _, y_test = self.ttsi.get()
+        for _, x in tqdm.tqdm(X_test.iterrows(), total=len(X_test)):
+            y_pred.append(recommender.Predict(str(x[0]), str(x[1])))
+            pred_proba = dotNetDistToArray(recommender.PredictDistribution(str(x[0]), str(x[1])))
+            y_pred_proba.append(pred_proba[1:])
+        
+        rmse = sklearn.metrics.mean_squared_error(y_test, y_pred)
+        score = sklearn.metrics.log_loss(y_test, y_pred_proba, labels=[1,2,3,4,5])
+        #score_manual = evidence(y_test, y_pred_proba, labels=[1,2,3,4,5])
+        #posterior = recommender.PredictDistribution(ui.user, ui.item);
+        #predRating = recommender.Predict(ui.user, ui.item);
+        return dict(
+            rmse=rmse,
+            loss=score, 
+            #tr_loss=score_train,
+            params=params,
+            train_time=train_time,
+            status=STATUS_OK
+        )
 
 """
 def objective(params):
