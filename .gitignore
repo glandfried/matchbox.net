@@ -16,3 +16,8 @@ InfernetWrapper/MatchboxHelper/*
 !.gitignore
 !RatingPredictors.py
 !requirements.txt
+!trials/
+!trials/*
+!figs/
+figs/*
+!figs/plotsFromCSV.py

@@ -23,7 +23,8 @@ from datetime import datetime
 import os
 
 SEPARATOR = ","
-NROWS = 10000
+#NROWS = 10000
+NROWS=None
 
 class UserItemPair():
     def __init__(self, user, item):
@@ -51,6 +52,7 @@ class TrainTestSplitInstance():
         self.path = datasetName
         #df = pd.read_csv(datasetName, dtype="int", header=None, sep=SEPARATOR)
         df = pd.read_csv(datasetName, sep=SEPARATOR, nrows=NROWS)
+        self.size = df.shape[0]
         df["rating"] = df["rating"].round(0).astype(int)
         df = df.reindex(columns=["userId","movieId","rating","timestamp"])
         X = df.iloc[:,[0,1,3]]
@@ -212,7 +214,8 @@ class Recommender():
         best["geo_mean"] = np.exp(-best["loss"]) #prediccion promedio, porque si en una productoria de las predicciones reemplazas todas las preds por el valor de la media geometrica, sale este
         if "tr_loss" in best.columns:
             best["geo_mean_tr"] = np.exp(-best["tr_loss"])
-        best.to_csv(f"./trials/{self.name()}_{datetime.today().strftime('%Y%m%d_%H-%M-%S')}.csv", header=True, index=False)
+        best["dataset_size"] = self.ttsi.size
+        best.to_csv(f"./trials/{self.resultsName()}.csv", header=True, index=False)
         return best
     
     def _formatOutput(self, trials):
@@ -233,7 +236,7 @@ class Recommender():
         return df[df.loss < df.loss.min() * 1.001].sort_values('tr_loss', ascending=False).head(30)
     
     def plotOverfitting(self, best, name=None):
-        name = name if name is not None else self.resultsName
+        name = name if name is not None else self.resultsName()
         plt.figure(figsize=(8,6))
         plt.scatter(best.tr_loss, best.loss, c=(best.loss-best.tr_loss)/best.loss*100)
         plt.title('Comparison of training and dev losses.\n Color corresponds to overfitting percentage')
@@ -247,7 +250,7 @@ class Recommender():
         plt.savefig(f"./figs/{name}.png")
 
     def plotParamDistribution(self, best, name=None):
-        name = name if name is not None else self.resultsName
+        name = name if name is not None else self.resultsName()
         cut_point = best.loss.median()
         best_models_df = best[best.loss <= cut_point]
         worst_models_df = best[best.loss > cut_point]
@@ -334,7 +337,7 @@ class Matchbox(Recommender):
         return "Matchbox"
     def defaultSpace(self) -> dict:
         return {
-            "traitCount" :  hp.quniform('traitCount', 5, 15, 1),
+            "traitCount" :  hp.quniform('traitCount', 6, 11, 1),
             "iterationCount" : hp.quniform('iterationCount', 10, 30, 10)
         }
     def objective(self, params: dict) -> dict:
