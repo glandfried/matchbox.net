@@ -5,10 +5,10 @@ Setup on linux:
     curl -o /usr/local/bin/nuget.exe https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
 - Install infer.net packages and copy all dlls to same folder (so pythonnet can find them) 
 mkdir -p ~/dotNet/packages && cd ~/dotNet/packages
-export NUGET="mono /usr/local/bin/nuget.exe install -ExcludeVersion" 
+export NUGET="mono /usr/local/bin/nuget.exe install -ExcludeVersion"
 ${NUGET} Microsoft.ML.Probabilistic 
 ${NUGET} Microsoft.ML.Probabilistic.Compiler 
-${NUGET} Microsoft.ML.Probabilistic.Learners 
+${NUGET} Microsoft.ML.Probabilistic.Learners
 mkdir -p ~/dotNet/libs 
 find ~/dotNet/packages/ -type f -name '*.dll' -exec cp -n {} ~/dotNet/libs ';'
 

@@ -54,7 +54,7 @@ class TrainTestSplitInstance():
         df = pd.read_csv(datasetName, sep=SEPARATOR, nrows=NROWS)
         self.size = df.shape[0]
         df["rating"] = df["rating"].round(0).astype(int)
-        df = df.reindex(columns=["userId","movieId","rating","timestamp"])
+        df = df.reindex(columns=["userId","movieId","rating","timestamp"]) #TODO:change to [1,2,3,4] if using csvs without headers
         X = df.iloc[:,[0,1,3]]
         y = df.iloc[:,2]
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=0)
@@ -317,7 +317,7 @@ class LGBM(Recommender):
         t0 = time()
         clf = LGBMClassifier(random_state = 1234, verbose=-1, **params).fit(X_train,y_train)
         train_time = time() - t0
-        y_pred = clf.predict(X_test)
+        y_pred = clf.predict(X_test) #TODO: esta prediciendo siempre 3??? Revisar con un dataset mas grande que el de 50
         y_pred_proba = clf.predict_proba(X_test)
         y_train_pred_proba = clf.predict_proba(X_train)
         rmse = sklearn.metrics.mean_squared_error(y_test, y_pred)
@@ -340,6 +340,30 @@ class Matchbox(Recommender):
             "traitCount" :  hp.quniform('traitCount', 6, 11, 1),
             "iterationCount" : hp.quniform('iterationCount', 10, 30, 10)
         }
+    def _formatPredDict(self, d):
+        """
+        Takes input of shape {usedId: {movieId: est_rating}} and converts it to array of estimated ratings.
+            Example: {"12": {"1": 1, "2": 2}, "13": {"1": 3, "2": 4}} becomes [1,2,3,4]
+            (where "12" and "13" are user ids, "1" and "2" are movie ids. Estimated ratings can be 1-5)
+        """
+        return [movieRating.Value for userRatings in d for movieRating in userRatings.Value] 
+    def _formatPredProbaDict(self, d):
+        """
+        Takes input of shape {usedId: {movieId: {0: rating_proba, 1:rating_proba, ..., 5:rating_proba}}} and converts it to array of 5 rating arrays.
+            Example: 
+                {"12":{"1":{ 1: 0.3, 2: 0.2, 3: 0.2, 4: 0.2, 5: 0.1}, 
+                    "2":{ 1: 0.2, 2: 0.3, 3: 0.2, 4: 0.2, 5: 0.1}},
+                "13":{"1":{ 1: 0.3, 2: 0.2, 3: 0.2, 4: 0.2, 5: 0.1}, 
+                    "2":{ 1: 0.2, 2: 0.3, 3: 0.2, 4: 0.2, 5: 0.1}}}
+            (where "12" and "13" are user ids, "1" and "2" are movie ids)
+            becomes:
+            [[0.3, 0.2, 0.2, 0.2, 0.1],
+            [0.2, 0.3, 0.2, 0.2, 0.1],
+            [0.3, 0.2, 0.2, 0.2, 0.1],
+            [0.2, 0.3, 0.2, 0.2, 0.1]]
+        """
+        return [[r.Value for movieRatings in userRatings.Value for r in movieRatings.Value] for userRatings in d] 
+
     def objective(self, params: dict) -> dict:
         # TODO: refactor with batch operations
         dataMapping = CsvMapping(SEPARATOR)
@@ -347,27 +371,26 @@ class Matchbox(Recommender):
         # Settings: https://dotnet.github.io/infer/userguide/Learners/Matchbox/API/Setting%20up%20a%20recommender.html
         recommender.Settings.Training.TraitCount = int(params["traitCount"])
         recommender.Settings.Training.IterationCount = int(params["iterationCount"])
+        _, _, y_train, y_test = self.ttsi.get()
         t0 = time()
         recommender.Train(self.ttsi.trainCsvPath());
         train_time = time() - t0
-        
-        y_pred = []
-        y_pred_proba = []
-        _, X_test, _, y_test = self.ttsi.get()
-        for _, x in tqdm.tqdm(X_test.iterrows(), total=len(X_test)):
-            y_pred.append(recommender.Predict(str(x[0]), str(x[1])))
-            pred_proba = dotNetDistToArray(recommender.PredictDistribution(str(x[0]), str(x[1])))
-            y_pred_proba.append(pred_proba[1:])
-        
+        y_pred = self._formatPredDict(recommender.Predict(self.ttsi.testCsvPath()))
+        y_pred_proba = self._formatPredProbaDict(recommender.PredictDistribution(self.ttsi.testCsvPath()))
+        y_train_pred_proba = self._formatPredProbaDict(recommender.PredictDistribution(self.ttsi.trainCsvPath()))
         rmse = sklearn.metrics.mean_squared_error(y_test, y_pred)
-        score = sklearn.metrics.log_loss(y_test, y_pred_proba, labels=[1,2,3,4,5])
+        score = sklearn.metrics.log_loss(y_test, y_pred_proba, labels=[0,1,2,3,4,5]) #TODO: check we're getting 6 probas instead of 5. Other algos are using 1-5 labels i think
+        score_train = sklearn.metrics.log_loss(y_train, y_train_pred_proba, labels=[0,1,2,3,4,5])
+        
+        #rmse = sklearn.metrics.mean_squared_error(y_test, y_pred)
+        #score = sklearn.metrics.log_loss(y_test, y_pred_proba, labels=[1,2,3,4,5])
         #score_manual = evidence(y_test, y_pred_proba, labels=[1,2,3,4,5])
         #posterior = recommender.PredictDistribution(ui.user, ui.item);
         #predRating = recommender.Predict(ui.user, ui.item);
         return dict(
             rmse=rmse,
             loss=score, 
-            #tr_loss=score_train,
+            tr_loss=score_train,
             params=params,
             train_time=train_time,
             status=STATUS_OK
