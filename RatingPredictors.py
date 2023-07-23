@@ -70,6 +70,7 @@ class TrainTestSplitInstance():
         df_test = pd.read_csv(self.testCsvPath(), sep=SEPARATOR, nrows=NROWS, header=None)
         self.X_test = df_test.iloc[:,[0,1,3]]
         self.y_test = df_test.iloc[:,2]
+        self.size = df_train.shape[0] + df_test.shape[0]
 
     def get(self):
         return self.X_train, self.X_test, self.y_train, self.y_test
@@ -315,7 +316,7 @@ class Matchbox(Recommender):
         recommender.Settings.Training.IterationCount = int(params["iterationCount"])
         _, _, y_train, y_test = self.ttsi.get()
         t0 = time()
-        recommender.Train(self.ttsi.trainCsvPath());
+        recommender.Train(self.ttsi.trainCsvPath()); #TODO: this is not working?
         train_time = time() - t0
         y_pred = self._formatPredDict(recommender.Predict(self.ttsi.testCsvPath()))
         y_pred_proba = self._formatPredProbaDict(recommender.PredictDistribution(self.ttsi.testCsvPath()))
