@@ -1,8 +1,8 @@
 import RatingPredictors
 
-#dataset = "./data/MovieLens/ml-20m/ratings.csv"
-dataset = "./data/MovieLens/data_50.csv"
-ttsi = RatingPredictors.TrainTestSplitInstance(dataset)
+dataset = "./data/MovieLens/ml-20m/ratings.csv"
+#dataset = "./data/MovieLens/data_50.csv"
+ttsi = RatingPredictors.TrainTestSplitInstance(dataset, from_csvs=True)
 #ttsi.to_csv(ttsi)
 
 useritem = RatingPredictors.ObservedRating("196","302", 900000000, 3)
