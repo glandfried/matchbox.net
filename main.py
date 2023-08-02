@@ -1,10 +1,11 @@
-import RatingPredictors
+from Matchbox import Matchbox
+from RatingPredictors import TrainTestSplitInstance
 
 dataset = "./data/MovieLens/ml-20m/ratings.csv"
-ttsi = RatingPredictors.TrainTestSplitInstance(dataset)
+ttsi = TrainTestSplitInstance(dataset)
 ttsi.trainBatches = 8
 ttsi.testBatches = 3
-ttsi.loadDatasets(preprocessed=False, NROWS=100_000, BATCH_SIZE=10_000)
+ttsi.loadDatasets(preprocessed=False, NROWS=100_000, BATCH_SIZE=None)
 del ttsi.X_test
 del ttsi.X_train
 #print("Loading dataset to DataFrame...")
@@ -12,10 +13,10 @@ del ttsi.X_train
 
 #ttsi.to_csv(ttsi)
 
-useritem = RatingPredictors.ObservedRating("196","302", 900000000, 3)
+#useritem = RatingPredictors.ObservedRating("196","302", 900000000, 3)
 #useritem = MatchboxImplementations.ObservedRating("196","302",900000000,1)
 #RatingPredictors.infer_matchbox_propio()
-print("Real rating: 3")
+#print("Real rating: 3")
 #print("LGBM", RatingPredictors.infer_LGBM(ttsi,10))
 
 """
@@ -24,7 +25,7 @@ df_lgbm=lgbm.bestCandidates()
 print("LGBM", df_lgbm)
 lgbm.plotOverfitting(df_lgbm)
 """
-mbox=RatingPredictors.Matchbox(ttsi)
+mbox=Matchbox(ttsi)
 df_mbox=mbox.bestCandidates()
 print("Matchbox", df_mbox)
 
