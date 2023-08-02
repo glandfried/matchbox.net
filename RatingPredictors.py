@@ -1,30 +1,28 @@
 import InfernetWrapper
 from InfernetWrapper import *
 #from tabnanny import verbose
-from surprise import SVDpp, Dataset, Reader
-from surprise.model_selection import cross_validate as surprise_cross_validate
-from surprise.model_selection import split
-from surprise.accuracy import rmse
+#from surprise import SVDpp, Dataset, Reader
+#from surprise.model_selection import cross_validate as surprise_cross_validate
+#from surprise.model_selection import split
+#from surprise.accuracy import rmse
 import pandas as pd
 import numpy as np
-from sklearn.naive_bayes import GaussianNB
+#from sklearn.naive_bayes import GaussianNB
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import cross_validate as sklearn_cross_validate
 import sklearn.metrics
 from sklearn.metrics import make_scorer
-from lightgbm import LGBMClassifier
+#from lightgbm import LGBMClassifier
 #import matchbox_refactor as mbox
 import tqdm
 from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
 from time import time
 import matplotlib.pyplot as plt
 from datetime import datetime
-import os
+#import os
 
 SEPARATOR = ","
-#NROWS = 10000
-NROWS=None
 
 class UserItemPair():
     def __init__(self, user, item):
@@ -44,13 +42,47 @@ class EstimatedRating(UserItemPair):
         super().__init__(user, item)
 
 class TrainTestSplitInstance():
-    def __init__(self, datasetName, from_csvs=False):
+    def __init__(self, datasetName):
         self.path = datasetName
-        if (from_csvs):
-            self.loadFromCsvs()
-            return None
-        #df = pd.read_csv(datasetName, dtype="int", header=None, sep=SEPARATOR)
-        df = pd.read_csv(datasetName, sep=SEPARATOR, nrows=NROWS)
+        self.trainBatches = None
+        self.testBatches = None
+
+    def loadDatasets(self, preprocessed=True, NROWS=None, BATCH_SIZE=None):
+        self.NROWS = NROWS
+        self.BATCH_SIZE = BATCH_SIZE
+        if preprocessed:
+            self._loadDatasetsFromPreprocessedCsvs()
+        else:
+            self._loadDatasetsFromRawCsv()
+            if self.BATCH_SIZE is not None:
+                self.saveInBatches()   
+
+    def saveInBatches(self):
+        dfTrain = pd.concat([self.X_train, self.y_train], axis=1, sort=False)
+        dfTrain = dfTrain.reindex(columns=[0,1,2,3])
+        dfTest = pd.concat([self.X_test, self.y_test], axis=1, sort=False)
+        dfTest = dfTest.reindex(columns=[0,1,2,3])
+        i = 0
+        print("=== Batching train set... ===")
+        for offset in tqdm.trange(0, dfTrain.shape[0], self.BATCH_SIZE):
+            dfTemp = dfTrain.loc[offset : offset+self.BATCH_SIZE-1]
+            print(f"Saving batch {i} with offset {offset} and size {dfTemp.shape[0]} to {self.trainCsvPath(idx=i)}")
+            dfTemp.to_csv(self.trainCsvPath(idx=i), header=False, index=False)
+            i += 1
+        self.trainBatches = i
+        print(f"{i} train batches generated.")
+        i = 0
+        print("=== Batching test set... ===")
+        for offset in tqdm.trange(0, dfTest.shape[0], self.BATCH_SIZE):
+            dfTemp = dfTest.loc[offset : offset+self.BATCH_SIZE-1]
+            print(f"Saving batch {i} with offset {offset} and size {dfTemp.shape[0]} to {self.testCsvPath(idx=i)}")
+            dfTemp.to_csv(self.testCsvPath(idx=i), header=False, index=False)
+            i += 1
+        self.testBatches = i
+        print(f"{i} test batches generated.")
+
+    def _loadDatasetsFromRawCsv(self):
+        df = pd.read_csv(self.path, sep=SEPARATOR, nrows=self.NROWS)
         self.size = df.shape[0]
         df["rating"] = df["rating"].round(0).astype(int)
         df = df.reindex(columns=["userId","movieId","rating","timestamp"])
@@ -59,26 +91,30 @@ class TrainTestSplitInstance():
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=0)
         self.X_train = X_train.rename(columns={"userId":0,"movieId":1,"timestamp":3}).reset_index(drop=True)
         self.X_test = X_test.rename(columns={"userId":0,"movieId":1,"timestamp":3}).reset_index(drop=True)
-        self.y_train = y_train.rename_axis(2).reset_index(drop=True)
+        self.y_train = y_train.rename(2).reset_index(drop=True)
         self.y_test = y_test.rename(2).reset_index(drop=True)
         self.to_csv()
 
-    def loadFromCsvs(self):
-        df_train = pd.read_csv(self.trainCsvPath(), sep=SEPARATOR, nrows=NROWS, header=None)
-        self.X_train = df_train.iloc[:,[0,1,3]]
-        self.y_train = df_train.iloc[:,2]
-        df_test = pd.read_csv(self.testCsvPath(), sep=SEPARATOR, nrows=NROWS, header=None)
-        self.X_test = df_test.iloc[:,[0,1,3]]
-        self.y_test = df_test.iloc[:,2]
-        self.size = df_train.shape[0] + df_test.shape[0]
+    def _loadDatasetsFromPreprocessedCsvs(self):
+        self.X_train, self.y_train, trainSize = self._generateDatasets(self.trainCsvPath())
+        self.X_test, self.y_test, testSize = self._generateDatasets(self.testCsvPath())
+        self.size = trainSize + testSize
+
+    def _generateDatasets(self, path):
+        df_train = pd.read_csv(path, sep=SEPARATOR, nrows=self.NROWS, header=None)
+        return (df_train.iloc[:,[0,1,3]], df_train.iloc[:,2], df_train.shape[0])
 
     def get(self):
         return self.X_train, self.X_test, self.y_train, self.y_test
 
-    def trainCsvPath(self):
+    def trainCsvPath(self, idx=None):
+        if idx is not None:
+            return self.path.replace("ratings.csv",f"batches/ratings_train_{idx}.csv")
         return f"{self.path[:-4]}_train.csv"
     
-    def testCsvPath(self):
+    def testCsvPath(self, idx=None):
+        if idx is not None:
+            return self.path.replace("ratings.csv",f"batches/ratings_test_{idx}.csv")
         return f"{self.path[:-4]}_test.csv"
 
     def to_csv(self):
@@ -314,13 +350,26 @@ class Matchbox(Recommender):
         # Settings: https://dotnet.github.io/infer/userguide/Learners/Matchbox/API/Setting%20up%20a%20recommender.html
         recommender.Settings.Training.TraitCount = int(params["traitCount"])
         recommender.Settings.Training.IterationCount = int(params["iterationCount"])
-        _, _, y_train, y_test = self.ttsi.get()
         t0 = time()
-        recommender.Train(self.ttsi.trainCsvPath()); #TODO: this is not working?
+        if self.ttsi.trainBatches is None:
+            recommender.Train(self.ttsi.trainCsvPath());
+        else:
+            for i in range(self.ttsi.trainBatches):
+                recommender.Train(self.ttsi.trainCsvPath(idx=i)); #TODO: this is not working?
         train_time = time() - t0
-        y_pred = self._formatPredDict(recommender.Predict(self.ttsi.testCsvPath()))
-        y_pred_proba = self._formatPredProbaDict(recommender.PredictDistribution(self.ttsi.testCsvPath()))
-        y_train_pred_proba = self._formatPredProbaDict(recommender.PredictDistribution(self.ttsi.trainCsvPath()))
+        y_pred = []
+        y_pred_proba = []
+        y_train_pred_proba = []
+        if self.ttsi.testBatches is None:
+            y_pred += self._formatPredDict(recommender.Predict(self.ttsi.testCsvPath()))
+            y_pred_proba += self._formatPredProbaDict(recommender.PredictDistribution(self.ttsi.testCsvPath()))
+            y_train_pred_proba += self._formatPredProbaDict(recommender.PredictDistribution(self.ttsi.trainCsvPath()))
+        else:
+            for i in range(self.ttsi.testBatches):
+                y_pred += self._formatPredDict(recommender.Predict(self.ttsi.testCsvPath(idx=i)))
+                y_pred_proba += self._formatPredProbaDict(recommender.PredictDistribution(self.ttsi.testCsvPath(idx=i)))
+                y_train_pred_proba += self._formatPredProbaDict(recommender.PredictDistribution(self.ttsi.trainCsvPath(idx=i)))
+        _, _, y_train, y_test = self.ttsi.get()
         rmse = sklearn.metrics.mean_squared_error(y_test, y_pred)
         score = sklearn.metrics.log_loss(y_test, y_pred_proba, labels=[0,1,2,3,4,5]) #TODO: check we're getting 6 probas instead of 5. Other algos are using 1-5 labels i think
         score_train = sklearn.metrics.log_loss(y_train, y_train_pred_proba, labels=[0,1,2,3,4,5])
