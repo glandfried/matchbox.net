@@ -11,8 +11,31 @@ namespace MatchboxHelper
 {
     using RatingDistribution = System.Collections.Generic.IDictionary<int, double>;
 
+    public interface MatchboxMapping<T> : Microsoft.ML.Probabilistic.Learners.Mappings.IStarRatingRecommenderMapping<string, Tuple<string, string, int>, string, string, int, NoFeatureSource, Vector>
+    {
+        IEnumerable<Tuple<string, string, int>> GetInstances(T instanceSource);
+
+        public static string GetUser(string instanceSource, Tuple<string, string, int> instance)
+        { return instance.Item1; }
+
+        public static string GetItem(string instanceSource, Tuple<string, string, int> instance)
+        { return instance.Item2; }
+
+        public static int GetRating(string instanceSource, Tuple<string, string, int> instance)
+        { return instance.Item3; }
+
+        public static Microsoft.ML.Probabilistic.Learners.IStarRatingInfo<int> GetRatingInfo(string instanceSource)
+        { return new Microsoft.ML.Probabilistic.Learners.StarRatingInfo(0, 5); }
+
+        public static Vector GetUserFeatures(Microsoft.ML.Probabilistic.Learners.NoFeatureSource featureSource, string user)
+        { throw new NotImplementedException(); }
+
+        public static Vector GetItemFeatures(Microsoft.ML.Probabilistic.Learners.NoFeatureSource featureSource, string item)
+        { throw new NotImplementedException(); }
+    }
+
     [Serializable]
-    public class CsvMapping : Microsoft.ML.Probabilistic.Learners.Mappings.IStarRatingRecommenderMapping<string, Tuple<string, string, int>, string, string, int, NoFeatureSource, Vector>
+    public class CsvMapping : MatchboxMapping<string>
     {
         private char sep;
         public CsvMapping() { this.sep = ','; }
@@ -25,30 +48,40 @@ namespace MatchboxHelper
                 yield return Tuple.Create(split[0], split[1], Convert.ToInt32(split[2]));
             }
         }
-
-        public string GetUser(string instanceSource, Tuple<string, string, int> instance)
-        { return instance.Item1; }
-
-        public string GetItem(string instanceSource, Tuple<string, string, int> instance)
-        { return instance.Item2; }
-
-        public int GetRating(string instanceSource, Tuple<string, string, int> instance)
-        { return instance.Item3; }
-
-        public Microsoft.ML.Probabilistic.Learners.IStarRatingInfo<int> GetRatingInfo(string instanceSource)
-        { return new Microsoft.ML.Probabilistic.Learners.StarRatingInfo(0, 5); }
-
-        public Vector GetUserFeatures(Microsoft.ML.Probabilistic.Learners.NoFeatureSource featureSource, string user)
-        { throw new NotImplementedException(); }
-
-        public Vector GetItemFeatures(Microsoft.ML.Probabilistic.Learners.NoFeatureSource featureSource, string item)
-        { throw new NotImplementedException(); }
     }
 
-    public static class MatchboxCsvWrapper {
+    // https://stackoverflow.com/questions/10297124/how-to-combine-more-than-two-generic-lists-in-c-sharp-zip
+    public static class MyFunkyExtensions
+    {
+        public static IEnumerable<TResult> ZipThree<T1, T2, T3, TResult>(
+            this IEnumerable<T1> source,
+            IEnumerable<T2> second,
+            IEnumerable<T3> third,
+            Func<T1, T2, T3, TResult> func)
+        {
+            using (var e1 = source.GetEnumerator())
+            using (var e2 = second.GetEnumerator())
+            using (var e3 = third.GetEnumerator())
+            {
+                while (e1.MoveNext() && e2.MoveNext() && e3.MoveNext())
+                    yield return func(e1.Current, e2.Current, e3.Current);
+            }
+        }
+    }
 
+    [Serializable]
+    public class DataframeMapping : MatchboxMapping<Dictionary<string, Array>>
+    {
+        public IEnumerable<Tuple<string, string, int>> GetInstances(Dictionary<string, Array> df)
+        {
+            return df["0"].ZipThree(df["1"], df["2"], (x, y, z) => Tuple.Create(x, y, Convert.ToInt32(z)));
+        }
+    }
+
+    public static class MatchboxCsvWrapper 
+    {
         public static Microsoft.ML.Probabilistic.Learners.IMatchboxRecommender<string, string, string, RatingDistribution, Microsoft.ML.Probabilistic.Learners.NoFeatureSource> 
-            Create(CsvMapping mapping) {
+            Create(MatchboxMapping<T> mapping) {
             return Microsoft.ML.Probabilistic.Learners.MatchboxRecommender.Create(mapping);
         }
     }
