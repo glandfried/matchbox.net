@@ -1,11 +1,15 @@
-import RatingPredictors
+from RatingPredictors import *
 import InfernetWrapper
 from InfernetWrapper import *
-import pandasnet
+import pandasnet #For pandas DataFrames and Series to work as parameters for C# functions https://pypi.org/project/pandasnet/
+from hyperopt import hp, STATUS_OK
 from time import time
 import sklearn.metrics
 
 class Matchbox(Recommender):
+    def __init__(self, ttsi: TrainTestSplitInstance, space: dict=None, fromDataframe=False):
+        self.fromDataframe = fromDataframe
+        super().__init__(ttsi, space)
     def name(self) -> str:
         return "Matchbox"
     def defaultSpace(self) -> dict:
@@ -39,30 +43,46 @@ class Matchbox(Recommender):
 
     def objective(self, params: dict) -> dict:
         # TODO: refactor with batch operations
-        dataMapping = CsvMapping(SEPARATOR)
+        dataMapping = DataframeMapping() if self.fromDataframe is None else CsvMapping()
         recommender = MatchboxCsvWrapper.Create(dataMapping)
         # Settings: https://dotnet.github.io/infer/userguide/Learners/Matchbox/API/Setting%20up%20a%20recommender.html
         recommender.Settings.Training.TraitCount = int(params["traitCount"])
         recommender.Settings.Training.IterationCount = int(params["iterationCount"])
         t0 = time()
         if self.ttsi.trainBatches is None:
-            recommender.Train(self.ttsi.trainCsvPath());
+            if self.fromDataframe:
+                recommender.Train(MatchboxCsvWrapper.MakeTuple(self.ttsi.X_train, self.ttsi.y_train));
+            else:
+                recommender.Train(self.ttsi.trainCsvPath())
         else:
-            for i in range(self.ttsi.trainBatches):
-                recommender.Train(self.ttsi.trainCsvPath(idx=i)); #TODO: this is not working?
+            if self.fromDataframe:
+                raise NotImplementedError("Training in batches using dataframes not implemented.")
+            else:
+                for i in range(self.ttsi.trainBatches):
+                    recommender.Train(self.ttsi.trainCsvPath(idx=i)); #TODO: this is not working?
         train_time = time() - t0
         y_pred = []
         y_pred_proba = []
         y_train_pred_proba = []
         if self.ttsi.testBatches is None:
-            y_pred += self._formatPredDict(recommender.Predict(self.ttsi.testCsvPath()))
-            y_pred_proba += self._formatPredProbaDict(recommender.PredictDistribution(self.ttsi.testCsvPath()))
-            y_train_pred_proba += self._formatPredProbaDict(recommender.PredictDistribution(self.ttsi.trainCsvPath()))
+            if self.fromDataframe:
+                # Load without batching, from Dataframes
+                y_pred += self._formatPredDict(recommender.Predict(MatchboxCsvWrapper.MakeTuple(self.ttsi.X_test, self.ttsi.y_test)))
+                y_pred_proba += self._formatPredProbaDict(recommender.PredictDistribution(MatchboxCsvWrapper.MakeTuple(self.ttsi.X_test, self.ttsi.y_test)))
+                y_train_pred_proba += self._formatPredProbaDict(recommender.PredictDistribution(MatchboxCsvWrapper.MakeTuple(self.ttsi.X_train, self.ttsi.y_train)))
+            else:
+                # Load without batching, from CSV
+                y_pred += self._formatPredDict(recommender.Predict(self.ttsi.testCsvPath()))
+                y_pred_proba += self._formatPredProbaDict(recommender.PredictDistribution(self.ttsi.testCsvPath()))
+                y_train_pred_proba += self._formatPredProbaDict(recommender.PredictDistribution(self.ttsi.trainCsvPath()))
         else:
-            for i in range(self.ttsi.testBatches):
-                y_pred += self._formatPredDict(recommender.Predict(self.ttsi.testCsvPath(idx=i)))
-                y_pred_proba += self._formatPredProbaDict(recommender.PredictDistribution(self.ttsi.testCsvPath(idx=i)))
-                y_train_pred_proba += self._formatPredProbaDict(recommender.PredictDistribution(self.ttsi.trainCsvPath(idx=i)))
+            if self.fromDataframe:    
+                raise NotImplementedError("Training in batches using dataframes not implemented.")
+            else:
+                for i in range(self.ttsi.testBatches):
+                    y_pred += self._formatPredDict(recommender.Predict(self.ttsi.testCsvPath(idx=i)))
+                    y_pred_proba += self._formatPredProbaDict(recommender.PredictDistribution(self.ttsi.testCsvPath(idx=i)))
+                    y_train_pred_proba += self._formatPredProbaDict(recommender.PredictDistribution(self.ttsi.trainCsvPath(idx=i)))
         _, _, y_train, y_test = self.ttsi.get()
         rmse = sklearn.metrics.mean_squared_error(y_test, y_pred)
         score = sklearn.metrics.log_loss(y_test, y_pred_proba, labels=[0,1,2,3,4,5]) #TODO: check we're getting 6 probas instead of 5. Other algos are using 1-5 labels i think

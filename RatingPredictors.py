@@ -9,6 +9,7 @@ import sklearn.metrics
 import tqdm
 import matplotlib.pyplot as plt
 from datetime import datetime
+from hyperopt import fmin, Trials, tpe
 #import os
 
 SEPARATOR = ","
@@ -78,10 +79,10 @@ class TrainTestSplitInstance():
         X = df.iloc[:,[0,1,3]]
         y = df.iloc[:,2]
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=0)
-        self.X_train = X_train.rename(columns={"userId":0,"movieId":1,"timestamp":3}).reset_index(drop=True)
-        self.X_test = X_test.rename(columns={"userId":0,"movieId":1,"timestamp":3}).reset_index(drop=True)
-        self.y_train = y_train.rename(2).reset_index(drop=True)
-        self.y_test = y_test.rename(2).reset_index(drop=True)
+        self.X_train = X_train.reset_index(drop=True)
+        self.X_test = X_test.reset_index(drop=True)
+        self.y_train = y_train.reset_index(drop=True)
+        self.y_test = y_test.reset_index(drop=True)
         self.to_csv()
 
     def _loadDatasetsFromPreprocessedCsvs(self):
@@ -91,6 +92,7 @@ class TrainTestSplitInstance():
 
     def _generateDatasets(self, path):
         df_train = pd.read_csv(path, sep=SEPARATOR, nrows=self.NROWS, header=None)
+        df_train.rename(columns={0:"userId",1:"movieId", 2:"rating", 3:"timestamp"})
         return (df_train.iloc[:,[0,1,3]], df_train.iloc[:,2], df_train.shape[0])
 
     def get(self):
@@ -108,10 +110,10 @@ class TrainTestSplitInstance():
 
     def to_csv(self):
         dfTrain = pd.concat([self.X_train, self.y_train], axis=1, sort=False)
-        dfTrain = dfTrain.reindex(columns=[0,1,2,3])
+        dfTrain = dfTrain.reindex(columns=["userId","movieId","rating","timestamp"])
         dfTrain.to_csv(self.trainCsvPath(), header=False, index=False)
         dfTest = pd.concat([self.X_test, self.y_test], axis=1, sort=False)
-        dfTest = dfTest.reindex(columns=[0,1,2,3])
+        dfTest = dfTest.reindex(columns=["userId","movieId","rating","timestamp"])
         dfTest.to_csv(self.testCsvPath(), header=False, index=False)
 
 class Recommender():

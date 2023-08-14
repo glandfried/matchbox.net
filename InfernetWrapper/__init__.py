@@ -4,7 +4,7 @@
 import sys
 import os
 import clr
-from System import Array, Double, Int32, Type, Converter
+from System import Array, Double, Int32, Type, Converter, Tuple
 import System
 from System import Console
 from System import Array

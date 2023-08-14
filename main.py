@@ -3,11 +3,11 @@ from RatingPredictors import TrainTestSplitInstance
 
 dataset = "./data/MovieLens/ml-20m/ratings.csv"
 ttsi = TrainTestSplitInstance(dataset)
-ttsi.trainBatches = 8
-ttsi.testBatches = 3
 ttsi.loadDatasets(preprocessed=False, NROWS=100_000, BATCH_SIZE=None)
-del ttsi.X_test
-del ttsi.X_train
+#ttsi.trainBatches = 8
+#ttsi.testBatches = 3
+#del ttsi.X_test
+#del ttsi.X_train
 #print("Loading dataset to DataFrame...")
 #dataset = "./data/MovieLens/data_50.csv"
 
