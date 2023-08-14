@@ -13,6 +13,8 @@ namespace MatchboxHelper
 
     public class MatchboxMapping<T> : Microsoft.ML.Probabilistic.Learners.Mappings.IStarRatingRecommenderMapping<T, Tuple<string, string, int>, string, string, int, NoFeatureSource, Vector>
     {
+        protected bool verbose = false;
+
         public virtual IEnumerable<Tuple<string, string, int>> GetInstances(T instanceSource)
         { throw new NotImplementedException(); }
 
@@ -24,6 +26,12 @@ namespace MatchboxHelper
 
         public int GetRating(T instanceSource, Tuple<string, string, int> instance)
         { return instance.Item3; }
+
+        public bool Verbose(bool value)
+        { 
+            this.verbose = value;
+            return this.verbose;
+        }
 
         public Microsoft.ML.Probabilistic.Learners.IStarRatingInfo<int> GetRatingInfo(T instanceSource)
         { return new Microsoft.ML.Probabilistic.Learners.StarRatingInfo(0, 5); }
@@ -50,7 +58,7 @@ namespace MatchboxHelper
                 while ((s = sr.ReadLine()) != null)
                 {
                     string[] split = s.Split(new[] { this.sep });
-                    Console.WriteLine("Read line {0}", i);
+                    if (this.verbose) {Console.WriteLine("Read line {0}", i);}
                     i++;
                     yield return Tuple.Create(split[0], split[1], Convert.ToInt32(split[2]));
                 }
@@ -117,14 +125,14 @@ namespace MatchboxHelper
         }
 
         public static Microsoft.ML.Probabilistic.Learners.IMatchboxRecommender<Tuple<Dictionary<string, Array>, Array>, string, string, RatingDistribution, Microsoft.ML.Probabilistic.Learners.NoFeatureSource> 
-        Create(DataframeMapping mapping) {
-            Console.WriteLine("Creating Matchbox recommender");
+        Create(DataframeMapping mapping, bool verbose = false) {
+            if (verbose) { Console.WriteLine("Creating Matchbox recommender"); }
             return Microsoft.ML.Probabilistic.Learners.MatchboxRecommender.Create(mapping);
         }
 
-        public static Tuple<Dictionary<string, Array>, Array> MakeTuple(Dictionary<string, Array> a, Array b)
+        public static Tuple<Dictionary<string, Array>, Array> MakeTuple(Dictionary<string, Array> a, Array b, bool verbose = false)
         {
-            Console.WriteLine("string tuple conversion");
+            if (verbose) { Console.WriteLine("string tuple conversion"); }
             return Tuple.Create(a, b);
         }
     }
