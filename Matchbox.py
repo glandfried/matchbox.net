@@ -39,7 +39,7 @@ class Matchbox(Recommender):
             [0.3, 0.2, 0.2, 0.2, 0.1],
             [0.2, 0.3, 0.2, 0.2, 0.1]]
         """
-        return [[r.Value for movieRatings in userRatings.Value for r in movieRatings.Value] for userRatings in d] 
+        return [[r.Value for r in movieRatings.Value] for userRatings in d for movieRatings in userRatings.Value] 
 
     def objective(self, params: dict) -> dict:
         # TODO: refactor with batch operations
