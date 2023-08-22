@@ -48,6 +48,7 @@ class Matchbox(Recommender):
         # Settings: https://dotnet.github.io/infer/userguide/Learners/Matchbox/API/Setting%20up%20a%20recommender.html
         recommender.Settings.Training.TraitCount = int(params["traitCount"])
         recommender.Settings.Training.IterationCount = int(params["iterationCount"])
+        recommender.Settings.Training.BatchCount = 2000
         t0 = time()
         if self.ttsi.trainBatches is None:
             if self.fromDataframe:
@@ -61,6 +62,7 @@ class Matchbox(Recommender):
                 for i in range(self.ttsi.trainBatches):
                     recommender.Train(self.ttsi.trainCsvPath(idx=i)); #TODO: this is not working?
         train_time = time() - t0
+        print("Finished training")
         y_pred = []
         y_pred_proba = []
         y_train_pred_proba = []

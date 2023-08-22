@@ -11,6 +11,59 @@ namespace MatchboxHelper
 {
     using RatingDistribution = System.Collections.Generic.IDictionary<int, double>;
 
+    [Serializable]
+    private  class  BatchCsvRecommenderTestMapping : IMatchboxRecommenderMapping<string, Microsoft.ML.Probabilistic.Learners.NoFeatureSource>
+    {
+        IDictionary<int, IList<int>> loadedUserIdBatches;
+        IDictionary<int, IList<int>> loadedItemIdBatches;
+        IDictionary<int, IList<int>> loadedRatingBatches;
+
+        public BatchCsvRecommenderTestMapping(int batchNum) 
+        {
+            this.batchNum = batchNum;
+            this.loadedUserIdBatches = Enumerable.Range(0, batchNum).ToDictionary(x => x, x => null);
+            this.loadedItemIdBatches = Enumerable.Range(0, batchNum).ToDictionary(x => x, x => null);
+            this.loadedRatingBatches = Enumerable.Range(0, batchNum).ToDictionary(x => x, x => null);
+        }
+        public  IList<int> GetUserIds(string instanceSource, int batchNumber = 0)
+        {
+            using (StreamReader sr = File.OpenText(instanceSource))
+            {
+                string s = String.Empty;
+                int i = 0;
+                while ((s = sr.ReadLine()) != null)
+                {
+                    string[] split = s.Split(new[] { this.sep });
+                    if (this.verbose) {Console.WriteLine("Read line {0}", i);}
+                    i++;
+                    yield return Tuple.Create(split[0], split[1], Convert.ToInt32(split[2]));
+                }
+            }
+            return instanceSource.UserIds[batchNumber];
+        }
+        public  IList<int> GetItemIds(string instanceSource, int batchNumber = 0)
+        {
+            return instanceSource.ItemIds[batchNumber];
+        }
+        public  IList<int> GetRatings(string instanceSource, int batchNumber = 0)
+        {
+            return instanceSource.Ratings[batchNumber];
+        }
+        public  int GetUserCount(string instanceSource)
+        {
+            return instanceSource.UserCount;
+        }
+        public  int GetItemCount(string instanceSource)
+        {
+            return instanceSource.ItemCount;
+        }
+        public  int GetRatingCount(string instanceSource)
+        {
+            return 6; // Rating values are from 0 to 5
+        }
+    }
+
+
     public class MatchboxMapping<T> : Microsoft.ML.Probabilistic.Learners.Mappings.IStarRatingRecommenderMapping<T, Tuple<string, string, int>, string, string, int, NoFeatureSource, Vector>
     {
         protected bool verbose = false;
