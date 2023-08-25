@@ -58,5 +58,6 @@ if not os.path.isdir(f"./figs/{name}"):
     os.makedirs(f"./figs/{name}")
 
 df = pd.read_csv(f"./trials/{name}.csv")
-plotOverfitting(df, name)
-plotParamDistribution(df, name)
+df
+#plotOverfitting(df, name)
+#plotParamDistribution(df, name)
