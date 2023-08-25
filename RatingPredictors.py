@@ -117,8 +117,9 @@ class TrainTestSplitInstance():
         dfTest.to_csv(self.testCsvPath(), header=False, index=False)
 
 class Recommender():
-    def __init__(self, ttsi: TrainTestSplitInstance, space: dict=None):
+    def __init__(self, ttsi: TrainTestSplitInstance, max_trials: int=100, space: dict=None):
         self.ttsi = ttsi
+        self.max_trials = max_trials
         self.space = space if space is not None else self.defaultSpace()
 
     def resultsName(self) -> str:
@@ -132,7 +133,7 @@ class Recommender():
     def bestCandidates(self):
         """Perform trials over parameter space and return best candidates."""
         trials = Trials()
-        best = fmin(lambda x: self.objective(x), self.space, algo=tpe.suggest, max_evals=16, trials=trials)
+        best = fmin(lambda x: self.objective(x), self.space, algo=tpe.suggest, max_evals=self.max_trials, trials=trials)
         best = self._formatOutput(trials)
         best["geo_mean"] = np.exp(-best["loss"]) #prediccion promedio, porque si en una productoria de las predicciones reemplazas todas las preds por el valor de la media geometrica, sale este
         if "tr_loss" in best.columns:

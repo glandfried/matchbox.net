@@ -3,7 +3,7 @@ from RatingPredictors import TrainTestSplitInstance
 
 dataset = "./data/MovieLens/ml-20m/ratings.csv"
 ttsi = TrainTestSplitInstance(dataset)
-ttsi.loadDatasets(preprocessed=False, NROWS=None, BATCH_SIZE=None)
+ttsi.loadDatasets(preprocessed=False, NROWS=100_000, BATCH_SIZE=None)
 #ttsi.trainBatches = 8
 #ttsi.testBatches = 3
 #del ttsi.X_test
@@ -25,7 +25,7 @@ df_lgbm=lgbm.bestCandidates()
 print("LGBM", df_lgbm)
 lgbm.plotOverfitting(df_lgbm)
 """
-mbox=Matchbox(ttsi)
+mbox=Matchbox(ttsi, max_trials=100)
 df_mbox=mbox.bestCandidates()
 print("Matchbox", df_mbox)
 

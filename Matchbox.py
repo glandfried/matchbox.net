@@ -7,15 +7,19 @@ from time import time
 import sklearn.metrics
 
 class Matchbox(Recommender):
-    def __init__(self, ttsi: TrainTestSplitInstance, space: dict=None, fromDataframe=False):
+    def __init__(self, ttsi: TrainTestSplitInstance, max_trials: int=100, space: dict=None, fromDataframe=False):
         self.fromDataframe = fromDataframe
-        super().__init__(ttsi, space)
+        super().__init__(ttsi, max_trials, space)
     def name(self) -> str:
         return "Matchbox"
     def defaultSpace(self) -> dict:
         return {
-            "traitCount" :  hp.quniform('traitCount', 6, 11, 1),
-            "iterationCount" : hp.quniform('iterationCount', 10, 30, 10)
+            "traitCount" :  hp.quniform('traitCount', 3, 20, 1),
+            "iterationCount" : hp.quniform('iterationCount', 10, 50, 10),
+            "UserTraitFeatureWeightPriorVariance" : hp.choice('UserTraitFeatureWeightPriorVariance', [0,1,2]),
+            "ItemTraitFeatureWeightPriorVariance" : hp.choice('ItemTraitFeatureWeightPriorVariance', [0,1,2]),
+            "ItemTraitVariance" : hp.choice("ItemTraitVariance", [0,1,2]),
+            "UserTraitVariance" : hp.choice("UserTraitVariance", [0,1,2])
         }
     def _formatPredDict(self, d):
         """
@@ -48,7 +52,7 @@ class Matchbox(Recommender):
         # Settings: https://dotnet.github.io/infer/userguide/Learners/Matchbox/API/Setting%20up%20a%20recommender.html
         recommender.Settings.Training.TraitCount = int(params["traitCount"])
         recommender.Settings.Training.IterationCount = int(params["iterationCount"])
-        recommender.Settings.Training.BatchCount = 2000
+        #recommender.Settings.Training.BatchCount = 2000
         t0 = time()
         if self.ttsi.trainBatches is None:
             if self.fromDataframe:
