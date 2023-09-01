@@ -1,12 +1,13 @@
 from tabnanny import verbose
-from surprise import SVDpp, Dataset, Reader
-from surprise.model_selection import cross_validate as surprise_cross_validate
-from surprise.model_selection import split
-from surprise.accuracy import rmse
+#from surprise import SVDpp, Dataset, Reader
+#from surprise.model_selection import cross_validate as surprise_cross_validate
+#from surprise.model_selection import split
+#from surprise.accuracy import rmse
+from RatingPredictors import *
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.naive_bayes import GaussianNB
 from lightgbm import LGBMClassifier
-import matchbox_refactor as mbox
+#import matchbox_refactor as mbox
 from time import time
 from hyperopt import hp, STATUS_OK
 
@@ -65,17 +66,18 @@ class LGBM(Recommender):
         return {
             #'boosting_type' : hp.choice('boosting_type', ["gbdt", "rf"]),
             'n_estimators': hp.quniform('n_estimators', 100, 500, 100),
-            "num_iterations": hp.choice("num_iterations", [100]),
+            #"num_iterations": hp.choice("num_iterations", [100]),
+            #"num_leaves": hp.quniform("num_leaves"),
             #'bagging_freq' : hp.choice('bagging_freq', range(10, 300, 10)),
             'subsample': hp.quniform('subsample', 0.7, 0.90, 0.02),
             #'objective': hp.choice('objective', ["regression", "regression_l1"]),
             'learning_rate': hp.qloguniform('learning_rate', np.log(0.04), np.log(0.17), 0.01),
-            #'reg_alpha': hp.choice('ra', [0, hp.quniform('reg_alpha', 0.01, 0.1, 0.01)]),
+            'reg_alpha': hp.choice('ra', [0, hp.quniform('reg_alpha', 0.01, 0.1, 0.01)]),
             #'reg_lambda': hp.choice('rl', [0, hp.quniform('reg_lambda', 0.01, 0.1, 0.01)]),
         }
     def objective(self, params: dict) -> dict:
         params['n_estimators'] = int(params['n_estimators'])
-        params['num_iterations'] = int(params['num_iterations'])
+        #params['num_iterations'] = int(params['num_iterations'])
         X_train, X_test, y_train, y_test = self.ttsi.get()
         t0 = time()
         clf = LGBMClassifier(random_state = 1234, verbose=-1, **params).fit(X_train,y_train)

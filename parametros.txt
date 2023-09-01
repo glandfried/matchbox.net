@@ -1,12 +1,18 @@
 Matchbox:
-https://dotnet.github.io/infer/apiguide/api/Microsoft.ML.Probabilistic.Learners.MatchboxRecommenderAdvancedTrainingSettings.html
-    - hidden features
-    - iteration count
-    - AffinityNoiseVariance mantener default. En trueskill varia la escala de las predicciones pero nada mas asi que no valdria la pena.
-    - ItemBiasFeatureWeightPriorVariance, ItemTraitFeatureWeightPriorVariance y demas valores relacionados a priors probar por arriba con dataset chico a ver si hacen diferencia
-    - ver si ItemTraitVariance settea la varianza de la suma
-    - UserThresholdNoiseVariance y demas de los thresholds no son tan importantes como los features asi que podemos no tocarlos
+    https://dotnet.github.io/infer/apiguide/api/Microsoft.ML.Probabilistic.Learners.MatchboxRecommenderAdvancedTrainingSettings.html
+        - hidden features (trait count)[def 4]: 3 a 20
+        - iteration count[def 20]: 10 a 50 (no se que seria un buen numero)
+        - AffinityNoiseVariance mantener default. En trueskill varia la escala de las predicciones pero nada mas asi que no valdria la pena.
+        - ItemBiasFeatureWeightPriorVariance, ItemTraitFeatureWeightPriorVariance y demas valores relacionados a priors probar por arriba con dataset chico a ver si hacen diferencia
+        - ver si ItemTraitVariance settea la varianza de la suma: LO ES. Idem UserTraitVariance
+        - UserThresholdNoiseVariance y demas de los thresholds no son tan importantes como los features asi que podemos no tocarlos
 
 
-TODO: se puede pedir la historia de los intereses de una persona en el tiempo. hay que revisar si tiene story y ver que hacer con eso
-TODO: BatchCountDefault en training settings?? https://dotnet.github.io/infer/apiguide/api/Microsoft.ML.Probabilistic.Learners.MatchboxRecommenderTrainingSettings.html
+    TODO: se puede pedir la historia de los intereses de una persona en el tiempo. hay que revisar si tiene story y ver que hacer con eso
+    TODO: BatchCountDefault en training settings?? https://dotnet.github.io/infer/apiguide/api/Microsoft.ML.Probabilistic.Learners.MatchboxRecommenderTrainingSettings.html
+
+
+    Otras cosas interesantes:
+    - GetPredictionLossFunction(out Func<Int32, Int32, Double>)
+
+    Gets the loss function which determines how a prediction in the form of a distribution is converted into a point prediction

@@ -7,15 +7,20 @@ from time import time
 import sklearn.metrics
 
 class Matchbox(Recommender):
-    def __init__(self, ttsi: TrainTestSplitInstance, space: dict=None, fromDataframe=False):
+    def __init__(self, ttsi: TrainTestSplitInstance, max_trials: int=100, space: dict=None, fromDataframe=False):
+        assert "0ratings" in ttsi.path, "Make sure to use a ratings file where ratings start from 0"
         self.fromDataframe = fromDataframe
-        super().__init__(ttsi, space)
+        super().__init__(ttsi, max_trials, space)
     def name(self) -> str:
         return "Matchbox"
     def defaultSpace(self) -> dict:
         return {
-            "traitCount" :  hp.quniform('traitCount', 6, 11, 1),
-            "iterationCount" : hp.quniform('iterationCount', 10, 30, 10)
+            "traitCount" :  hp.quniform('traitCount', 10, 30, 1),
+            "iterationCount" : hp.quniform('iterationCount', 2, 28, 5),
+            "UserTraitFeatureWeightPriorVariance" : hp.choice('UserTraitFeatureWeightPriorVariance', [0.75,1,1.25,1.5,1.75,2]),
+            "ItemTraitFeatureWeightPriorVariance" : hp.choice('ItemTraitFeatureWeightPriorVariance', [0,0.25,0.5,0.75,1]),
+            "ItemTraitVariance" : hp.choice("ItemTraitVariance", [0,0.25,0.5,0.75,1]),
+            "UserTraitVariance" : hp.choice("UserTraitVariance", [0,0.25,0.5,0.75,1])
         }
     def _formatPredDict(self, d):
         """
@@ -48,7 +53,7 @@ class Matchbox(Recommender):
         # Settings: https://dotnet.github.io/infer/userguide/Learners/Matchbox/API/Setting%20up%20a%20recommender.html
         recommender.Settings.Training.TraitCount = int(params["traitCount"])
         recommender.Settings.Training.IterationCount = int(params["iterationCount"])
-        recommender.Settings.Training.BatchCount = 2000
+        #recommender.Settings.Training.BatchCount = 2000
         t0 = time()
         if self.ttsi.trainBatches is None:
             if self.fromDataframe:

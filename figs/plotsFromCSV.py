@@ -1,5 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import os
 
 def plotOverfitting(best, name):
         best["loss"] = best["loss"].astype(float)
@@ -16,7 +17,8 @@ def plotOverfitting(best, name):
         plt.xlabel('tr loss')
         plt.ylabel('dev loss')
         plt.grid()
-        plt.savefig(f"./figs/{name}.png")
+
+        plt.savefig(f"./figs/{name}/overfitting.png")
 
 def plotParamDistribution(best, name):
     cut_point = best.loss.median()
@@ -48,9 +50,14 @@ def plotParamDistribution(best, name):
         visualize_param(param_name)
         plt.title(param_name)
         plt.tight_layout()
-        plt.savefig(f"./figs/{name}_{param_name}.png")
+        plt.savefig(f"./figs/{name}/{param_name}.png")
 
-name="LGBM_20230718_17-28-55"
+name="Matchbox_20230825_07-46-42"
+
+if not os.path.isdir(f"./figs/{name}"):
+    os.makedirs(f"./figs/{name}")
+
 df = pd.read_csv(f"./trials/{name}.csv")
-plotOverfitting(df, name)
+df
+#plotOverfitting(df, name)
 #plotParamDistribution(df, name)

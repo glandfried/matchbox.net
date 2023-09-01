@@ -1,9 +1,10 @@
 from Matchbox import Matchbox
 from RatingPredictors import TrainTestSplitInstance
+from Others import LGBM
 
-dataset = "./data/MovieLens/ml-20m/ratings.csv"
+dataset = "./data/MovieLens/ml-20m-0ratings/ratings.csv"
 ttsi = TrainTestSplitInstance(dataset)
-ttsi.loadDatasets(preprocessed=False, NROWS=None, BATCH_SIZE=None)
+ttsi.loadDatasets(preprocessed=False, NROWS=100_000, BATCH_SIZE=None)
 #ttsi.trainBatches = 8
 #ttsi.testBatches = 3
 #del ttsi.X_test
@@ -20,12 +21,11 @@ ttsi.loadDatasets(preprocessed=False, NROWS=None, BATCH_SIZE=None)
 #print("LGBM", RatingPredictors.infer_LGBM(ttsi,10))
 
 """
-lgbm=RatingPredictors.LGBM(ttsi)
+lgbm=LGBM(ttsi, max_trials=100)
 df_lgbm=lgbm.bestCandidates()
 print("LGBM", df_lgbm)
-lgbm.plotOverfitting(df_lgbm)
 """
-mbox=Matchbox(ttsi)
+mbox=Matchbox(ttsi, max_trials=100)
 df_mbox=mbox.bestCandidates()
 print("Matchbox", df_mbox)
 
