@@ -13,7 +13,7 @@ from hyperopt import hp, STATUS_OK
 
 # https://surprise.readthedocs.io/en/stable/getting_started.html#use-a-custom-dataset
 def infer_SVDpp(datasetName, ui, ts):
-    reader = Reader(line_format="user item rating timestamp", sep=SEPARATOR, rating_scale=(1,5))
+    reader = Reader(line_format="user item rating timestamp", sep=SEPARATOR, rating_scale=(0,5))
     algo = SVDpp()
     data = Dataset.load_from_file(datasetName, reader=reader).build_full_trainset()
 
@@ -43,7 +43,7 @@ def infer_RandomForest(ttsi, n_estimators=100):
     y_pred_proba = clf.predict_proba(X_test)
     rmse = sklearn.metrics.mean_squared_error(y_test, y_pred)
     score = sklearn.metrics.log_loss(y_test, y_pred_proba, labels=clf.classes_)
-    score_manual = evidence(y_test, y_pred_proba, labels=[1,2,3,4,5])
+    score_manual = evidence(y_test, y_pred_proba, labels=[0,1,2,3,4,5])
     return {"rmse":rmse, "cross-entropy":score}
 
 def infer_NaiveBayes(ttsi):
