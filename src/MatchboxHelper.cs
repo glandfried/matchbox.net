@@ -10,7 +10,7 @@ using Microsoft.ML.Probabilistic.Math;
 namespace MatchboxHelper
 {
     using RatingDistribution = System.Collections.Generic.IDictionary<int, double>;
-
+    /*
     [Serializable]
     private  class  BatchCsvRecommenderTestMapping : IMatchboxRecommenderMapping<string, Microsoft.ML.Probabilistic.Learners.NoFeatureSource>
     {
@@ -59,10 +59,10 @@ namespace MatchboxHelper
         }
         public  int GetRatingCount(string instanceSource)
         {
-            return 6; // Rating values are from 0 to 5
+            return 7; // Rating values are from 1 to 6 (from 0 to 5)
         }
     }
-
+    */
 
     public class MatchboxMapping<T> : Microsoft.ML.Probabilistic.Learners.Mappings.IStarRatingRecommenderMapping<T, Tuple<string, string, int>, string, string, int, NoFeatureSource, Vector>
     {
@@ -87,7 +87,7 @@ namespace MatchboxHelper
         }
 
         public Microsoft.ML.Probabilistic.Learners.IStarRatingInfo<int> GetRatingInfo(T instanceSource)
-        { return new Microsoft.ML.Probabilistic.Learners.StarRatingInfo(0, 5); }
+        { return new Microsoft.ML.Probabilistic.Learners.StarRatingInfo(1, 6); }
 
         public Vector GetUserFeatures(Microsoft.ML.Probabilistic.Learners.NoFeatureSource featureSource, string user)
         { throw new NotImplementedException(); }
