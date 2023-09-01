@@ -87,7 +87,7 @@ namespace MatchboxHelper
         }
 
         public Microsoft.ML.Probabilistic.Learners.IStarRatingInfo<int> GetRatingInfo(T instanceSource)
-        { return new Microsoft.ML.Probabilistic.Learners.StarRatingInfo(0, 5); }
+        { return new Microsoft.ML.Probabilistic.Learners.StarRatingInfo(1, 5); }
 
         public Vector GetUserFeatures(Microsoft.ML.Probabilistic.Learners.NoFeatureSource featureSource, string user)
         { throw new NotImplementedException(); }
