@@ -8,18 +8,19 @@ import sklearn.metrics
 
 class Matchbox(Recommender):
     def __init__(self, ttsi: TrainTestSplitInstance, max_trials: int=100, space: dict=None, fromDataframe=False):
+        assert "0ratings" in ttsi.path, "Make sure to use a ratings file where ratings start from 0"
         self.fromDataframe = fromDataframe
         super().__init__(ttsi, max_trials, space)
     def name(self) -> str:
         return "Matchbox"
     def defaultSpace(self) -> dict:
         return {
-            "traitCount" :  hp.quniform('traitCount', 3, 20, 1),
-            "iterationCount" : hp.quniform('iterationCount', 10, 50, 10),
-            "UserTraitFeatureWeightPriorVariance" : hp.choice('UserTraitFeatureWeightPriorVariance', [0,1,2]),
-            "ItemTraitFeatureWeightPriorVariance" : hp.choice('ItemTraitFeatureWeightPriorVariance', [0,1,2]),
-            "ItemTraitVariance" : hp.choice("ItemTraitVariance", [0,1,2]),
-            "UserTraitVariance" : hp.choice("UserTraitVariance", [0,1,2])
+            "traitCount" :  hp.quniform('traitCount', 10, 30, 1),
+            "iterationCount" : hp.quniform('iterationCount', 2, 28, 5),
+            "UserTraitFeatureWeightPriorVariance" : hp.choice('UserTraitFeatureWeightPriorVariance', [0.75,1,1.25,1.5,1.75,2]),
+            "ItemTraitFeatureWeightPriorVariance" : hp.choice('ItemTraitFeatureWeightPriorVariance', [0,0.25,0.5,0.75,1]),
+            "ItemTraitVariance" : hp.choice("ItemTraitVariance", [0,0.25,0.5,0.75,1]),
+            "UserTraitVariance" : hp.choice("UserTraitVariance", [0,0.25,0.5,0.75,1])
         }
     def _formatPredDict(self, d):
         """

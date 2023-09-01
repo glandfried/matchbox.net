@@ -2,7 +2,7 @@ from Matchbox import Matchbox
 from RatingPredictors import TrainTestSplitInstance
 from Others import LGBM
 
-dataset = "./data/MovieLens/ml-20m/ratings.csv"
+dataset = "./data/MovieLens/ml-20m-0ratings/ratings.csv"
 ttsi = TrainTestSplitInstance(dataset)
 ttsi.loadDatasets(preprocessed=False, NROWS=100_000, BATCH_SIZE=None)
 #ttsi.trainBatches = 8
@@ -20,6 +20,7 @@ ttsi.loadDatasets(preprocessed=False, NROWS=100_000, BATCH_SIZE=None)
 #print("Real rating: 3")
 #print("LGBM", RatingPredictors.infer_LGBM(ttsi,10))
 
+"""
 lgbm=LGBM(ttsi, max_trials=100)
 df_lgbm=lgbm.bestCandidates()
 print("LGBM", df_lgbm)
@@ -27,7 +28,6 @@ print("LGBM", df_lgbm)
 mbox=Matchbox(ttsi, max_trials=100)
 df_mbox=mbox.bestCandidates()
 print("Matchbox", df_mbox)
-"""
 
 #print("Naive Bayes", RatingPredictors.infer_NaiveBayes(ttsi))
 #print("Random Forest", RatingPredictors.infer_RandomForest(ttsi,10))
