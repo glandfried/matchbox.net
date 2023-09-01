@@ -21,3 +21,7 @@ InfernetWrapper/MatchboxHelper/*
 !figs/
 figs/*
 !figs/plotsFromCSV.py
+!data
+data/*
+!data/Tests
+!data/Tests/*

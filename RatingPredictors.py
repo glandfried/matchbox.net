@@ -33,6 +33,7 @@ class EstimatedRating(UserItemPair):
 
 class TrainTestSplitInstance():
     def __init__(self, datasetName):
+        assert("ratings.csv" in datasetName, "Code currently expects ratings file to be named ratings.csv and contain both train and test ratings.")
         self.path = datasetName
         self.trainBatches = None
         self.testBatches = None

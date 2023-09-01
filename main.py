@@ -2,9 +2,9 @@ from Matchbox import Matchbox
 from RatingPredictors import TrainTestSplitInstance
 from Others import LGBM
 
-dataset = "./data/MovieLens/ml-20m-0ratings/ratings.csv"
+dataset = "./data/MovieLens/ml-20m/ratings.csv"
 ttsi = TrainTestSplitInstance(dataset)
-ttsi.loadDatasets(preprocessed=False, NROWS=100_000, BATCH_SIZE=None)
+ttsi.loadDatasets(preprocessed=False, NROWS=100, BATCH_SIZE=None)
 #ttsi.trainBatches = 8
 #ttsi.testBatches = 3
 #del ttsi.X_test

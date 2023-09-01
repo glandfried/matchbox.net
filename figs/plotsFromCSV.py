@@ -58,6 +58,7 @@ if not os.path.isdir(f"./figs/{name}"):
     os.makedirs(f"./figs/{name}")
 
 df = pd.read_csv(f"./trials/{name}.csv")
+df = df.sort_values("loss")
 df
 #plotOverfitting(df, name)
 #plotParamDistribution(df, name)

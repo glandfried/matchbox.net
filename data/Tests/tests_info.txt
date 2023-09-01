@@ -1,0 +1,31 @@
+Test 1
+======
+Train:
+- movie 0 has been rated by users 1 to 5 (we have info about the movie) with a score of 5
+- user 0 has rated movies 1 to 5 with 0 (we have info about the user)
+Predict:
+- User 0's rating of movie 0, which is 5
+
+Test 2
+======
+Train:
+- Same as Test 1, but user 1 has rated movies 2 to 5 with 0, same as user 0
+Predict:
+- User 0's rating of movie 0, which is 5
+
+Test 3
+======
+Train:
+- movie 0 has been rated by users 1 to 5 (we have info about the movie) with a score of 5
+- user 0 has rated movies 1 to 5 with 5 (we have info about the user)
+Predict:
+- User 0's rating of movie 0, which is 5
+
+Test 4
+======
+Train:
+- movie 0 has been rated by users 1 to 5 (we have info about the movie) with a score of 5
+- user 0 has rated movies 1 to 5 with 3 (we have info about the user)
+- user 1 has rated movies 2 to 5 with 3
+Predict:
+- User 0's rating of movie 0, which is 5
