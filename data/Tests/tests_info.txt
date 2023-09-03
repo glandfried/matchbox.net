@@ -1,4 +1,4 @@
-Test 1
+Exploracion 1
 ======
 Train:
 - movie 0 has been rated by users 1 to 5 (we have info about the movie) with a score of 5
@@ -6,14 +6,14 @@ Train:
 Predict:
 - User 0's rating of movie 0, which is 5
 
-Test 2
+Exploracion 2
 ======
 Train:
-- Same as Test 1, but user 1 has rated movies 2 to 5 with 0, same as user 0
+- Same as Exploracion 1, but user 1 has rated movies 2 to 5 with 0, same as user 0
 Predict:
 - User 0's rating of movie 0, which is 5
 
-Test 3
+Exploracion 3
 ======
 Train:
 - movie 0 has been rated by users 1 to 5 (we have info about the movie) with a score of 5
@@ -21,7 +21,7 @@ Train:
 Predict:
 - User 0's rating of movie 0, which is 5
 
-Test 4
+Exploracion 4
 ======
 Train:
 - movie 0 has been rated by users 1 to 5 (we have info about the movie) with a score of 5

@@ -29,7 +29,7 @@ class Matchbox(Recommender):
             "UserTraitFeatureWeightPriorVariance": 1,
             "UserTraitVariance": 1,
             "iterationCount": 10,
-            "traitCount": 20
+            "traitCount": 5
             }
     def _formatPredDict(self, d):
         """
@@ -118,7 +118,7 @@ class Matchbox(Recommender):
         dfTest = dfTest.rename(columns={0:"userId",1:"movieId", 2:"y_test", 3:"timestamp"})
         dfTest["y_pred"] = y_pred
         for i in range(len(y_pred_proba[0])):
-            dfTest[f"y_proba_{i}"] = [a[i] for a in y_pred_proba]
+            dfTest[f"y_proba_{i+1}"] = [a[i] for a in y_pred_proba]
 
         return dfTest
     

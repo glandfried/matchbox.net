@@ -10,8 +10,8 @@ def get_immediate_subdirectories(a_dir):
 testDir = "./data/Tests"
 tests = [int(x.replace("test", "")) for x in get_immediate_subdirectories(testDir)]
 tests.sort()
-#for i in tests:
-for i in [1,2,4,5]:
+for i in tests:
+#for i in [1,2,4,5]:        
     dataset = f"{testDir}/test{i}/ratings.csv"
     ttsi = TrainTestSplitInstance(dataset)
     ttsi.loadDatasets(preprocessed=True, NROWS=None, BATCH_SIZE=None)
