@@ -51,7 +51,7 @@ def plotThresholds(gauss, user):
     plt.clf()
 
 class UserThresholds():
-    balancedRating = [(-np.inf, 0.0), ()]
+    balancedRating = [(-np.inf, 0.00), (-2.49, 0.33), (-1.12, 0.24), (0.00, 0.00), (1.12, 0.24), (2.47, 0.32), (np.inf, 0.00)]
     
 if __name__ == "__main__":
     movies = generateItems(100, 5)
@@ -60,7 +60,7 @@ if __name__ == "__main__":
     testDir = "./data/Tests"
     tests = [int(x.replace("test", "")) for x in get_immediate_subdirectories(testDir)]
     tests.sort()
-    for i in tests:
+    for i in tests[-1:]:
         print(F"========== TEST {i} ==========")
         dataset = f"{testDir}/test{i}/ratings.csv"
         ttsi = TrainTestSplitInstance(dataset)
@@ -76,6 +76,7 @@ if __name__ == "__main__":
             posteriors = userPosteriors.get_Item(user)
             #os.makedirs(f"./tmp/user{user}", exist_ok=True)
             plotThresholds(posteriors.Thresholds, user)
+            print([(float("{:.2f}".format(g.GetMean())), float("{:.2f}".format(g.GetVariance()))) for g in posteriors.Thresholds])
             #for i, thr in zip(range(len(posteriors.Thresholds)), posteriors.Thresholds):
             #    plotGaussian(thr.GetMean(), thr.GetVariance(), f"user{user}/thr-{i}")
         input("Press Enter to continue...") 

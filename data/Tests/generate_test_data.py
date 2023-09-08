@@ -6,7 +6,7 @@ MIN_RATING = 1
 def rate(file, users, movies, rating):
   for u in users:
     for m in movies:
-      file.write(f"{u},{m},{rating},999")
+      file.write(f"{u},{m},{rating},999\n")
 
 def test1(folder="data/Tests/test1"):
   os.makedirs(folder, exist_ok=True)
@@ -49,7 +49,7 @@ def test5(folder="data/Tests/test5"):
 def test8(folder="data/Tests/test8"):
   os.makedirs(folder, exist_ok=True)
   with open(f"{folder}/ratings_train.csv", "w") as file:
-    rate(file, list(range(0,6)), [0,6,12], 0)
+    rate(file, list(range(0,6)), [0,6,12], 6)
     rate(file, list(range(0,6)), [1,7,13], 1)
     rate(file, list(range(0,6)), [2,8,14], 2)
     rate(file, list(range(0,6)), [3,9,15], 3)
