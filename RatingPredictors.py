@@ -75,7 +75,7 @@ class TrainTestSplitInstance():
     def _loadDatasetsFromRawCsv(self):
         df = pd.read_csv(self.path, sep=SEPARATOR, nrows=self.NROWS)
         self.size = df.shape[0]
-        df["rating"] = df["rating"].round(0).astype(int) +1 #0.5 va a 0, +1 = 1
+        df["rating"] = df["rating"].round(0).astype(int) #0.5 va a 0, etc
         df = df.reindex(columns=["userId","movieId","rating","timestamp"])
         X = df.iloc[:,[0,1,3]]
         y = df.iloc[:,2]

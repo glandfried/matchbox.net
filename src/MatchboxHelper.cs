@@ -59,7 +59,7 @@ namespace MatchboxHelper
         }
         public  int GetRatingCount(string instanceSource)
         {
-            return 7; // Rating values are from 1 to 6 (from 0 to 5)
+            return 6; // Rating values are from 0 to 5
         }
     }
     */
@@ -67,6 +67,10 @@ namespace MatchboxHelper
     public class MatchboxMapping<T> : Microsoft.ML.Probabilistic.Learners.Mappings.IStarRatingRecommenderMapping<T, Tuple<string, string, int>, string, string, int, NoFeatureSource, Vector>
     {
         protected bool verbose = false;
+        protected int fromRating;
+        protected int toRating;
+
+        public MatchboxMapping(int from, int to) { this.fromRating = from; this.toRating = to;}
 
         public virtual IEnumerable<Tuple<string, string, int>> GetInstances(T instanceSource)
         { throw new NotImplementedException(); }
@@ -87,7 +91,7 @@ namespace MatchboxHelper
         }
 
         public Microsoft.ML.Probabilistic.Learners.IStarRatingInfo<int> GetRatingInfo(T instanceSource)
-        { return new Microsoft.ML.Probabilistic.Learners.StarRatingInfo(1, 6); }
+        { return new Microsoft.ML.Probabilistic.Learners.StarRatingInfo(this.fromRating,this.toRating); }
 
         public Vector GetUserFeatures(Microsoft.ML.Probabilistic.Learners.NoFeatureSource featureSource, string user)
         { throw new NotImplementedException(); }
@@ -100,8 +104,8 @@ namespace MatchboxHelper
     public class CsvMapping : MatchboxMapping<string>
     {
         private char sep;
-        public CsvMapping() { this.sep = ','; }
-        public CsvMapping(char separator) { this.sep = separator; }
+        public CsvMapping(int from, int to) : base(from, to) { this.sep = ','; }
+        public CsvMapping(int from, int to, char separator) : base(from, to) { this.sep = separator; }
         override public IEnumerable<Tuple<string, string, int>> GetInstances(string instanceSource)
         {
             using (StreamReader sr = File.OpenText(instanceSource))
@@ -148,7 +152,7 @@ namespace MatchboxHelper
     [Serializable]
     public class DataframeMapping : MatchboxMapping<Tuple<Dictionary<string, Array>, Array>>
     {
-        public DataframeMapping() {Console.WriteLine("Creating Dataframe Mapping");}
+        public DataframeMapping(int from, int to) : base(from, to) {Console.WriteLine("Creating Dataframe Mapping");}
 
         override public IEnumerable<Tuple<string, string, int>> GetInstances(Tuple<Dictionary<string, Array>, Array> tup)
         {
