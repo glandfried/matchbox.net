@@ -51,7 +51,7 @@ def plotThresholds(gauss, user):
     plt.clf()
 
 class UserThresholds():
-    balancedRating = [(-np.inf, 0.00), (-2.49, 0.33), (-1.12, 0.24), (0.00, 0.00), (1.12, 0.24), (2.47, 0.32), (np.inf, 0.00)]
+    balancedRating = [(-np.inf, 0.0), (-2.55, 0.32), (-1.16, 0.24), (0.0, 0.0), (1.19, 0.25), (2.69, 0.39), (np.inf, 0.0)]
     
 if __name__ == "__main__":
     movies = generateItems(100, 5)
