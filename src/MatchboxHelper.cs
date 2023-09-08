@@ -70,6 +70,7 @@ namespace MatchboxHelper
         protected int fromRating;
         protected int toRating;
 
+        public MatchboxMapping() { this.fromRating = 0; this.toRating = 5;}
         public MatchboxMapping(int from, int to) { this.fromRating = from; this.toRating = to;}
 
         public virtual IEnumerable<Tuple<string, string, int>> GetInstances(T instanceSource)
@@ -104,7 +105,7 @@ namespace MatchboxHelper
     public class CsvMapping : MatchboxMapping<string>
     {
         private char sep;
-        public CsvMapping(int from, int to) : base(from, to) { this.sep = ','; }
+        public CsvMapping() : base() { this.sep = ','; }
         public CsvMapping(int from, int to, char separator) : base(from, to) { this.sep = separator; }
         override public IEnumerable<Tuple<string, string, int>> GetInstances(string instanceSource)
         {
@@ -152,6 +153,7 @@ namespace MatchboxHelper
     [Serializable]
     public class DataframeMapping : MatchboxMapping<Tuple<Dictionary<string, Array>, Array>>
     {
+        public DataframeMapping() : base() {Console.WriteLine("Creating Dataframe Mapping");}
         public DataframeMapping(int from, int to) : base(from, to) {Console.WriteLine("Creating Dataframe Mapping");}
 
         override public IEnumerable<Tuple<string, string, int>> GetInstances(Tuple<Dictionary<string, Array>, Array> tup)
