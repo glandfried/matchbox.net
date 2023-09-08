@@ -32,7 +32,7 @@ def plotGaussian(mean, var, name):
     plt.clf()
 
 def plotThresholds(gauss, user):
-    grilla = list(np.arange(-6,6,0.1))
+    grilla = list(np.arange(-5,5,0.1))
     with np.errstate(divide='ignore', invalid="ignore"):
         for i, g in zip(range(len(gauss)), gauss):
             mean = g.GetMean()
@@ -72,13 +72,21 @@ if __name__ == "__main__":
         userPosteriors = recommender.GetPosteriorDistributions().Users
         itemPosteriors = recommender.GetPosteriorDistributions().Items
 
+        """
         for user in userPosteriors.Keys:
             posteriors = userPosteriors.get_Item(user)
             #os.makedirs(f"./tmp/user{user}", exist_ok=True)
             plotThresholds(posteriors.Thresholds, user)
             print([(float("{:.2f}".format(g.GetMean())), float("{:.2f}".format(g.GetVariance()))) for g in posteriors.Thresholds])
-            #for i, thr in zip(range(len(posteriors.Thresholds)), posteriors.Thresholds):
-            #    plotGaussian(thr.GetMean(), thr.GetVariance(), f"user{user}/thr-{i}")
+        """
+
+        for item in itemPosteriors.Keys:
+            posteriors = itemPosteriors.get_Item(item)
+            #os.makedirs(f"./tmp/item{item}", exist_ok=True)
+            #plotThresholds(posteriors.Thresholds, item)
+            print(f"ITEM {item}")
+            print([(float("{:.2f}".format(g.GetMean())), float("{:.2f}".format(g.GetVariance()))) for g in posteriors.Traits])
+
         input("Press Enter to continue...") 
 
     print("Terminado!")
