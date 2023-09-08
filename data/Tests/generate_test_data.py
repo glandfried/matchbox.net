@@ -67,12 +67,18 @@ def test7(folder="data/Tests/test7"):
 def test8(folder="data/Tests/test8"):
   os.makedirs(folder, exist_ok=True)
   with open(f"{folder}/ratings_train.csv", "w") as file:
-    rate(file, list(range(0,6)), [0,6,12], 0)
-    rate(file, list(range(0,6)), [1,7,13], 1)
-    rate(file, list(range(0,6)), [2,8,14], 2)
-    rate(file, list(range(0,6)), [3,9,15], 3)
-    rate(file, list(range(0,6)), [4,10,16], 4)
-    rate(file, list(range(0,6)), [5,11,17], 5)
+    rate(file, [0], [0], 0)
+    rate(file, [0], [1], 1)
+    rate(file, [0], [2], 2)
+    rate(file, [0], [3], 3)
+    rate(file, [0], [4], 4)
+    rate(file, [0], [5], 5)
+    rate(file, list(range(1,6)), [0,6,12], 0)
+    rate(file, list(range(1,6)), [1,7,13], 1)
+    rate(file, list(range(1,6)), [2,8,14], 2)
+    rate(file, list(range(1,6)), [3,9,15], 3)
+    rate(file, list(range(1,6)), [4,10,16], 4)
+    rate(file, list(range(1,6)), [5,11,17], 5)
   with open(f"{folder}/ratings_test.csv", "w") as file:
     rate(file, [0], [0], MAX_RATING, 1000)
 
@@ -94,6 +100,24 @@ def test9(folder="data/Tests/test9"):
   with open(f"{folder}/ratings_test.csv", "w") as file:
     rate(file, [0], [0], MAX_RATING, 1000)
 
+def test10(folder="data/Tests/test10"):
+  os.makedirs(folder, exist_ok=True)
+  with open(f"{folder}/ratings_train.csv", "w") as file:
+    rate(file, [100], [100], 0)
+    rate(file, [100], [101], 1)
+    rate(file, [100], [102], 2)
+    rate(file, [100], [103], 3)
+    rate(file, [100], [104], 4)
+    rate(file, [100], [105], 5)
+    rate(file, list(range(0,6)), [0,6,12], 0)
+    rate(file, list(range(0,6)), [1,7,13], 1)
+    rate(file, list(range(0,6)), [2,8,14], 2)
+    rate(file, list(range(0,6)), [3,9,15], 3)
+    rate(file, list(range(0,6)), [4,10,16], 4)
+    rate(file, list(range(0,6)), [5,11,17], 5)
+  with open(f"{folder}/ratings_test.csv", "w") as file:
+    rate(file, [0], [0], MAX_RATING, 1000)
+
 def generar_tests_csvs():
   test1()
   test2()
@@ -104,5 +128,6 @@ def generar_tests_csvs():
   test7()
   test8()
 
-test9()
+print("Generando test data")
+test10()
 #generar_tests_csvs()

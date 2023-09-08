@@ -41,6 +41,8 @@ def plotThresholds(gauss, user):
             col = p[0].get_color()
             ax = plt.gca()
             if not np.isinf(mean):
+                if var == 0:
+                    plt.axvline(mean, ymin=0 , ymax=1, color=col, alpha=0.5)    
                 #plt.stem(mean, norm.pdf(mean, mean, var), col)
                 plt.vlines(mean, ymin=0 , ymax=norm.pdf(mean, mean, var), color=col, alpha=0.5)
                 #plt.text(mean, -.05, f'thr_{i}', color=col, ha='center', va='top')
@@ -56,7 +58,7 @@ def plotItemTraits(gauss, item, isUser=False):
     # Create subplots 
     fig, axes = plt.subplots(nrows=3, ncols=2)
     fig.subplots_adjust(hspace=1)
-    fig.suptitle(f'Traits of movie {item}')
+    fig.suptitle(f'Traits of {"item" if not isUser else "user"} {item}')
     fig.set_figheight(8)
     fig.set_figwidth(7)
 
@@ -79,6 +81,46 @@ def Simulation():
     movies = generateItems(100, 5)
     people = generateItems(10, 5)
 
+def RomperSimetriaEsImportante():
+    movies = generateItems(100, 5)
+    people = generateItems(10, 5)
+
+    testDir = "./data/Tests"
+    tests = [int(x.replace("test", "")) for x in get_immediate_subdirectories(testDir)]
+    tests.sort()
+    print("Para ver el efecto abrir los graficos de user traits e items traits y mirarlos despues de correr con los datos del test 8 (rompe simetria usando items que despues otros usuarios púntuan), y despues de correr con los datos del test 10 (rompe simetria usando items que despues nadie mas puntua).")
+    for i in [8,10]:
+        print(F"========== TEST {i} ==========")
+        dataset = f"{testDir}/test{i}/ratings.csv"
+        ttsi = TrainTestSplitInstance(dataset)
+        ttsi.loadDatasets(preprocessed=True, NROWS=None, BATCH_SIZE=None)
+        mbox=Matchbox(ttsi, max_trials=1)
+        params = mbox.bestParams()
+        params["traitCount"] = 5
+        recommender = mbox.createRecommender(params)
+        _ = mbox.train(recommender)
+
+        userPosteriors = recommender.GetPosteriorDistributions().Users
+        itemPosteriors = recommender.GetPosteriorDistributions().Items
+        
+        for user in userPosteriors.Keys:
+            posteriors = userPosteriors.get_Item(user)
+            #os.makedirs(f"./tmp/user{user}", exist_ok=True)
+            plotThresholds(posteriors.Thresholds, user)
+            plotItemTraits(posteriors.Traits, user, isUser=True)
+            #print([(float("{:.2f}".format(g.GetMean())), float("{:.2f}".format(g.GetVariance()))) for g in posteriors.Thresholds])  
+
+        for item in itemPosteriors.Keys:
+            posteriors = itemPosteriors.get_Item(item)
+            #os.makedirs(f"./tmp/item{item}", exist_ok=True)
+            #plotThresholds(posteriors.Thresholds, item)
+            print(f"ITEM {item}")
+            print([(float("{:.2f}".format(g.GetMean())), float("{:.2f}".format(g.GetVariance()))) for g in posteriors.Traits])
+            plotItemTraits(posteriors.Traits, item)
+
+        input("Press Enter to continue...") 
+
+    print("Terminado!")
 
 if __name__ == "__main__":
     movies = generateItems(100, 5)
@@ -87,7 +129,7 @@ if __name__ == "__main__":
     testDir = "./data/Tests"
     tests = [int(x.replace("test", "")) for x in get_immediate_subdirectories(testDir)]
     tests.sort()
-    for i in tests[-1:]:
+    for i in [10]:
         print(F"========== TEST {i} ==========")
         dataset = f"{testDir}/test{i}/ratings.csv"
         ttsi = TrainTestSplitInstance(dataset)
