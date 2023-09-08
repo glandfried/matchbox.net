@@ -7,6 +7,19 @@ def get_immediate_subdirectories(a_dir):
     return [name for name in os.listdir(a_dir)
             if os.path.isdir(os.path.join(a_dir, name))]
 
+
+dataset = f"./data/Tests/test4/ratings.csv"
+ttsi = TrainTestSplitInstance(dataset)
+ttsi.loadDatasets(preprocessed=True, NROWS=None, BATCH_SIZE=None)
+mbox=Matchbox(ttsi, max_trials=1)
+recommender = mbox.createRecommender(mbox.bestParams())
+_ = mbox.train(recommender)
+
+print(recommender.__dir__())
+
+
+exit
+
 testDir = "./data/Tests"
 tests = [int(x.replace("test", "")) for x in get_immediate_subdirectories(testDir)]
 tests.sort()
