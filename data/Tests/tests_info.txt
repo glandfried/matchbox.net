@@ -1,31 +1,53 @@
-Test 1
+Exploration 1
 ======
 Train:
-- movie 0 has been rated by users 1 to 5 (we have info about the movie) with a score of 5
-- user 0 has rated movies 1 to 5 with 0 (we have info about the user)
+- movie 0 has been rated by users 1 to 5 (we have info about the movie) with MAX_SCORE
+- user 0 has rated movies 1 to 5 with MIN_SCORE (we have info about the user)
 Predict:
-- User 0's rating of movie 0, which is 5
+- User 0's rating of movie 0, which is MAX_SCORE
+Hypothesis:
+Predicted result will be somewhere in the middle of MIN_SCORE and MAX_SCORE
+Result:
+   userId  movieId  y_test  timestamp  y_pred  y_proba_1  y_proba_2  y_proba_3  y_proba_4  y_proba_5  y_proba_6
+0       0        0       6       1000       1   0.298267   0.055791   0.140238   0.149482   0.144009   0.212213
 
-Test 2
+Predicted result was MIN_SCORE, next highest probability was MAX_SCORE
+
+Exploration 2
 ======
 Train:
-- Same as Test 1, but user 1 has rated movies 2 to 5 with 0, same as user 0
+- Same as Exploration 1, but user 1 has rated movies 2 to 5 with MIN_SCORE, same as user 0
 Predict:
-- User 0's rating of movie 0, which is 5
+- User 0's rating of movie 0, which is MAX_SCORE
 
-Test 3
+Exploration 3
 ======
 Train:
-- movie 0 has been rated by users 1 to 5 (we have info about the movie) with a score of 5
-- user 0 has rated movies 1 to 5 with 5 (we have info about the user)
+- movie 0 has been rated by users 1 to 5 (we have info about the movie) with MAX_SCORE
+- user 0 has rated movies 1 to 5 with MAX_SCORE (we have info about the user)
 Predict:
-- User 0's rating of movie 0, which is 5
+- User 0's rating of movie 0, which is MAX_SCORE
 
-Test 4
+Exploration 4
 ======
 Train:
-- movie 0 has been rated by users 1 to 5 (we have info about the movie) with a score of 5
+- movie 0 has been rated by users 1 to 5 (we have info about the movie) with MAX_SCORE
 - user 0 has rated movies 1 to 5 with 3 (we have info about the user)
-- user 1 has rated movies 2 to 5 with 3
+- user 1 has rated movies 1 to 5 with 3
 Predict:
-- User 0's rating of movie 0, which is 5
+- User 0's rating of movie 0, which is MAX_SCORE
+
+Exploration 5
+======
+Same as exploration 4 but user 0 and 1 rate movies 1 to 5 with 2
+
+Exploration 6
+======
+Same as exploration 5 but users 1 to 5 also rate movies 7, 8, 9 with MAX_SCORE
+
+hypothesis: predicted probabilities will be even more polarised towards ratings 2 and MAX_SCORE.
+result:
+
+Exploration 7
+======
+Users 1 to 5 rate movies 1 to 5 the same value as their movie id. They also rate movie 0 with MAX_SCORE.

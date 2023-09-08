@@ -2,6 +2,7 @@
 * 
 
 ## NOT IGNORED:
+!/*.py
 !InfernetWrapper
 InfernetWrapper/*
 !InfernetWrapper/__init__.py
