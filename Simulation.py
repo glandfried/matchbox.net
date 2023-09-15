@@ -118,9 +118,9 @@ def GenerateData():
         generated_users = addEstimatedValues(generated_users, user, thr=UserThresholds[user], tra=userTraits[user])
     generated_users["Bias"] = userBias
 
-    generated_items = pd.DataFrame.from_dict({"Item":list(range(numItems)), "Bias":itemBias})
-    for user in range(numUsers):
-        generated_items = addEstimatedValues(generated_items, user, thr=None, tra=itemTraits[user])
+    generated_items = pd.DataFrame.from_dict({"Item":list(range(numItems))})
+    for item in range(numItems):
+        generated_items = addEstimatedValues(generated_items, item, thr=None, tra=itemTraits[item])
     generated_items["Bias"] = itemBias
 
     generatedUserData = []
@@ -196,15 +196,28 @@ def RomperSimetriaEsImportante():
 
     print("Terminado!")
 
+def formatNumToString(var):
+    if np.isinf(var):
+        var = "np.inf" if var > 0 else "-np.inf"
+    else:
+        var = f"{var:.5f}"
+    return var
+
+def GaussianToString(g):
+    if g.IsPointMass:
+        return f"Gaussian.PointMass({formatNumToString(g.Point)})"
+    else:
+        return f"Gaussian({formatNumToString(g.GetMean())}, {formatNumToString(g.GetVariance())})"  
+
 def addEstimatedValues(df, user, thr=None, tra=None, bias=None):
     if thr is not None:
         if type(thr[0]) == Gaussian:
             # If gaussian make column for mean and variance
             for i in range(len(thr)):
-                df.loc[user, f'Threshold_{i}'] = thr[i]
-            for i in range(len(thr)):
-                df.loc[user, f'Threshold_{i}_m'] = thr[i].GetMean()
-                df.loc[user, f'Threshold_{i}_v'] = thr[i].GetVariance()
+                df.loc[user, f'Threshold_{i}'] = GaussianToString(thr[i])
+            #for i in range(len(thr)):
+                #df.loc[user, f'Threshold_{i}_m'] = thr[i].GetMean()
+                #df.loc[user, f'Threshold_{i}_v'] = thr[i].GetVariance()
         else:
             # Else put absolute values
             for i in range(len(thr)):
@@ -214,10 +227,10 @@ def addEstimatedValues(df, user, thr=None, tra=None, bias=None):
         if type(tra[0]) == Gaussian:
             # If gaussian make column for mean and variance
             for i in range(len(tra)):
-                df.loc[user, f'Trait_{i}'] = tra[i]
-            for i in range(len(tra)):
-                df.loc[user, f'Trait_{i}_m'] = tra[i].GetMean()
-                df.loc[user, f'Trait_{i}_v'] = tra[i].GetVariance()
+                df.loc[user, f'Trait_{i}'] = GaussianToString(tra[i])
+            #for i in range(len(tra)):
+                #df.loc[user, f'Trait_{i}_m'] = tra[i].GetMean()
+                #df.loc[user, f'Trait_{i}_v'] = tra[i].GetVariance()
         else:
             for i in range(len(tra)):
                 df.loc[user, f'Trait_{i}'] = tra[i]
@@ -225,20 +238,19 @@ def addEstimatedValues(df, user, thr=None, tra=None, bias=None):
     if bias is not None:
         if type(bias) == Gaussian:
             # If gaussian make column for mean and variance
-            df.loc[user, f'Bias'] = bias
-            df.loc[user, f'Bias_m'] = bias.GetMean()
-            df.loc[user, f'Bias_v'] = bias.GetVariance()
+            df.loc[user, f'Bias'] = GaussianToString(bias)
+            #df.loc[user, f'Bias_m'] = bias.GetMean()
+            #df.loc[user, f'Bias_v'] = bias.GetVariance()
         else:
             df.loc[user, f'Bias'] = bias
     return df
 
-def SimulationPlots(path, generated_users, generated_items, estimated_users, estimated_items):
-    #generated_users = pd.read_csv(f"{path}/user_truth.csv")
-    #generated_items = pd.read_csv(f"{path}/item_truth.csv")
-    #estimated_users = pd.read_csv(f"{path}/user_estimated.csv")
-    #estimated_items = pd.read_csv(f"{path}/item_estimated.csv")
+def SimulationPlots(path, generated_users=None, generated_items=None, estimated_users=None, estimated_items=None):
+    generated_users = generated_users if generated_users is not None else pd.read_csv(f"{path}/user_truth.csv")
+    generated_items = generated_items if generated_items is not None else pd.read_csv(f"{path}/item_truth.csv")
+    estimated_users = estimated_users if estimated_users is not None else pd.read_csv(f"{path}/user_estimated.csv")
+    estimated_items = estimated_items if estimated_items is not None else pd.read_csv(f"{path}/item_estimated.csv")
     
-    path = f"./data/Simulation/{datetime.today().strftime('%Y%m%d_%H-%M-%S')}"
     userThresholdMask = ["Threshold" in col for col in generated_users.columns]
     userTraitMask = ["Trait" in col for col in generated_users.columns]
     itemTraitMask = ["Trait" in col for col in generated_items.columns]
@@ -247,20 +259,29 @@ def SimulationPlots(path, generated_users, generated_items, estimated_users, est
     userTraitMask_e = userTraitMask + [False]*(estimated_users.shape[1]-generated_users.shape[1])
     itemTraitMask_e = itemTraitMask + [False]*(estimated_items.shape[1]-generated_items.shape[1])
     
+    if "Gaussian" in estimated_users.loc[:,userThresholdMask_e].iloc[0,0]:
+        for col in estimated_users.loc[:,userThresholdMask_e].columns:
+            estimated_users[col] = [eval(x) for x in estimated_users[col]]
+        for col in estimated_users.loc[:,userTraitMask_e].columns:
+            estimated_users[col] = [eval(x) for x in estimated_users[col]]
+        for col in estimated_items.loc[:,itemTraitMask_e].columns:
+            estimated_items[col] = [eval(x) for x in estimated_items[col]]
+
     os.makedirs(path+"/users", exist_ok=True)
     os.makedirs(path+"/items", exist_ok=True)
     
+    print("Generating user plots....")
     for user in tqdm(generated_users["User"], total=generated_users.shape[0]):
         plotThresholds(estimated_users.iloc[user][userThresholdMask_e], user, path=path+"/users", truth=generated_users.iloc[int(user)][userThresholdMask])
         plotItemTraits(estimated_users.iloc[user][userTraitMask_e], user, isUser=True, path=path+"/users", truth=generated_users.iloc[user][userTraitMask])
     
-    for user in tqdm(generated_users["Item"], total=generated_users.shape[0]):
-        plotItemTraits(estimated_items.iloc[user][itemTraitMask_e], user, isUser=True, path=path+"/items", truth=generated_items.iloc[user][itemTraitMask])
+    print("Generating item plots....")
+    for item in tqdm(generated_items["Item"][:10], total=10): #generated_items.shape[0]):
+        plotItemTraits(estimated_items.iloc[item][itemTraitMask_e], item, isUser=False, path=path+"/items", truth=generated_items.iloc[user][itemTraitMask])
 
 
-def Simulation():
+def Simulation(path):
     df, generated_users, generated_items = GenerateData()
-    path = f"./data/Simulation/{datetime.today().strftime('%Y%m%d_%H-%M-%S')}"
     os.makedirs(path, exist_ok=True)
     
     generated_users.to_csv(f"{path}/user_truth.csv", header=True, index=False)
@@ -278,14 +299,11 @@ def Simulation():
 
     userPosteriors = recommender.GetPosteriorDistributions().Users
     itemPosteriors = recommender.GetPosteriorDistributions().Items
-    userTraitMask = ["Trait" in col for col in generated_users.columns]
-    userThresholdMask = ["Threshold" in col for col in generated_users.columns]
-    itemTraitMask = ["Trait" in col for col in generated_items.columns]
 
-    estimated_users = pd.DataFrame.from_dict({"user":userPosteriors.Keys}).sort_values("user").reset_index(drop=True)
-    estimated_items = pd.DataFrame.from_dict({"item":itemPosteriors.Keys}).sort_values("item").reset_index(drop=True)
+    estimated_users = pd.DataFrame.from_dict({"user": [int(x) for x in userPosteriors.Keys]}).sort_values("user").reset_index(drop=True)
+    estimated_items = pd.DataFrame.from_dict({"item": [int(x) for x in itemPosteriors.Keys]}).sort_values("item").reset_index(drop=True)
 
-    print("Generating user plots...")
+    print("Generating user data...")
     for user in tqdm(userPosteriors.Keys, total=len(userPosteriors.Keys)):
         posteriors = userPosteriors.get_Item(user)
         #os.makedirs(path+"/users", exist_ok=True)
@@ -293,24 +311,26 @@ def Simulation():
         #plotItemTraits(posteriors.Traits, user, isUser=True, path=path+"/users", truth=generated_users.iloc[int(user)][userTraitMask])
         estimated_users = addEstimatedValues(estimated_users, int(user), thr=posteriors.Thresholds, tra=posteriors.Traits, bias=posteriors.Bias)
 
-    print("Generating item plots...")
+    print("Generating item data...")
     for item in tqdm(itemPosteriors.Keys, total=len(itemPosteriors.Keys)):
         posteriors = itemPosteriors.get_Item(item)
         #os.makedirs(path+"/items", exist_ok=True)
         #plotItemTraits(posteriors.Traits, item, isUser=False, path=path+"/items", truth=generated_items.iloc[int(item)][itemTraitMask])
-        estimated_items = addEstimatedValues(estimated_items, int(user), tra=posteriors.Traits, bias=posteriors.Bias)
+        estimated_items = addEstimatedValues(estimated_items, int(item), tra=posteriors.Traits, bias=posteriors.Bias)
     
     estimated_users.to_csv(f"{path}/user_estimated.csv", header=True, index=False)
     estimated_items.to_csv(f"{path}/item_estimated.csv", header=True, index=False)
 
     print("Simulación terminada!")
-    SimulationPlots(path, generated_users, generated_items, estimated_users, estimated_items)
+    #SimulationPlots(path, generated_users, generated_items, estimated_users, estimated_items)
 
 def dummyRatingsTestSplitFile(folder):
     with open(f"{folder}/ratings_test.csv", "w") as file:
       file.write(f"2,2,2,999\n")
 
 if __name__ == "__main__":
-    Simulation()
-    print("Terminado!")
-    SimulationPlots("./data/Simulation/20230915_14-25-09")
+    path = f"./data/Simulation/"
+    #path += datetime.today().strftime('%Y%m%d_%H-%M-%S')
+    path += "20230915_17-48-58"
+    #Simulation(path)
+    SimulationPlots(path)
