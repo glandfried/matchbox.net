@@ -52,13 +52,14 @@ def plotParamDistribution(best, name):
         plt.tight_layout()
         plt.savefig(f"./figs/{name}/{param_name}.png")
 
-name="Matchbox_20230825_07-46-42"
+names=["LGBM_20230918_13-36-59", "Matchbox_20230918_13-58-08", "RandomForest_20230918_14-05-40"]
 
-if not os.path.isdir(f"./figs/{name}"):
-    os.makedirs(f"./figs/{name}")
+for name in names:
+    if not os.path.isdir(f"./figs/{name}"):
+        os.makedirs(f"./figs/{name}")
 
-df = pd.read_csv(f"./trials/{name}.csv")
-df = df.sort_values("loss")
-df
-#plotOverfitting(df, name)
-#plotParamDistribution(df, name)
+    df = pd.read_csv(f"./trials/{name}.csv")
+    df = df.sort_values("loss")
+    print(df)
+    plotOverfitting(df, name)
+    plotParamDistribution(df, name)

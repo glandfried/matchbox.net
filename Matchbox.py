@@ -5,6 +5,7 @@ import pandasnet #For pandas DataFrames and Series to work as parameters for C# 
 from hyperopt import hp, STATUS_OK
 from time import time
 import sklearn.metrics
+from InfernetWrapper import Gaussian
 
 class Matchbox(Recommender):
     def __init__(self, ttsi: TrainTestSplitInstance, max_trials: int=100, space: dict=None, fromDataframe=False):
@@ -54,6 +55,72 @@ class Matchbox(Recommender):
             [0.2, 0.3, 0.2, 0.2, 0.1]]
         """
         return [[r.Value for r in movieRatings.Value] for userRatings in d for movieRatings in userRatings.Value] 
+    
+    def addEstimatedValues(self, df, user, thr=None, tra=None, bias=None):
+        def formatNumToString(var):
+            if np.isinf(var):
+                var = "np.inf" if var > 0 else "-np.inf"
+            else:
+                var = f"{var:.5f}"
+            return var
+
+        def GaussianToString(g):
+            if g.IsPointMass:
+                return f"Gaussian.PointMass({formatNumToString(g.Point)})"
+            else:
+                return f"Gaussian({formatNumToString(g.GetMean())}, {formatNumToString(g.GetVariance())})"  
+            
+        if thr is not None:
+            if type(thr[0]) == Gaussian:
+                # If gaussian make column for mean and variance
+                for i in range(len(thr)):
+                    df.loc[user, f'Threshold_{i}'] = GaussianToString(thr[i])
+            else:
+                # Else put absolute values
+                for i in range(len(thr)):
+                    df.loc[user, f'Threshold_{i}'] = thr[i]
+
+        if tra is not None:
+            if type(tra[0]) == Gaussian:
+                for i in range(len(tra)):
+                    df.loc[user, f'Trait_{i}'] = GaussianToString(tra[i])
+            else:
+                for i in range(len(tra)):
+                    df.loc[user, f'Trait_{i}'] = tra[i]
+
+        if bias is not None:
+            if type(bias) == Gaussian:
+                df.loc[user, f'Bias'] = GaussianToString(bias)
+            else:
+                df.loc[user, f'Bias'] = bias
+        return df
+
+    def GetPosteriors(self, recommender, path):
+        userPosteriors = recommender.GetPosteriorDistributions().Users
+        itemPosteriors = recommender.GetPosteriorDistributions().Items
+
+        estimated_users = pd.DataFrame.from_dict({"user": [int(x) for x in userPosteriors.Keys]}).sort_values("user").reset_index(drop=True)
+        estimated_items = pd.DataFrame.from_dict({"item": [int(x) for x in itemPosteriors.Keys]}).sort_values("item").reset_index(drop=True)
+
+        print("Generating user data...")
+        for user in tqdm(userPosteriors.Keys, total=len(userPosteriors.Keys)):
+            posteriors = userPosteriors.get_Item(user)
+            #os.makedirs(path+"/users", exist_ok=True)
+            #plotThresholds(posteriors.Thresholds, user, path=path+"/users", truth=generated_users.iloc[int(user)][userThresholdMask])
+            #plotItemTraits(posteriors.Traits, user, isUser=True, path=path+"/users", truth=generated_users.iloc[int(user)][userTraitMask])
+            estimated_users = self.addEstimatedValues(estimated_users, int(user), thr=posteriors.Thresholds, tra=posteriors.Traits, bias=posteriors.Bias)
+
+        print("Generating item data...")
+        for item in tqdm(itemPosteriors.Keys, total=len(itemPosteriors.Keys)):
+            posteriors = itemPosteriors.get_Item(item)
+            #os.makedirs(path+"/items", exist_ok=True)
+            #plotItemTraits(posteriors.Traits, item, isUser=False, path=path+"/items", truth=generated_items.iloc[int(item)][itemTraitMask])
+            estimated_items = self.addEstimatedValues(estimated_items, int(item), tra=posteriors.Traits, bias=posteriors.Bias)
+        
+        estimated_users.to_csv(f"{path}/user_estimated.csv", header=True, index=False)
+        estimated_items.to_csv(f"{path}/item_estimated.csv", header=True, index=False)
+
+        return estimated_users, estimated_items
 
     def train(self, recommender):
         t0 = time()

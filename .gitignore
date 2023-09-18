@@ -26,3 +26,7 @@ figs/*
 data/*
 !data/Tests
 !data/Tests/*
+!data/Simulation
+data/Simulation/*
+!data/Simulation/mbox_train_20230915
+!data/Simulation/mbox_train_20230915/*
