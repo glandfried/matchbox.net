@@ -58,6 +58,46 @@ def infer_NaiveBayes(ttsi):
 def infer_matchbox_propio():
     MatchboxPropio.RecommenderSystem().Run()
 
+class RandomForest(Recommender):
+    def name(self) -> str:
+        return "RandomForest"
+    def defaultSpace(self) -> dict:
+        # Got parameters to test from https://towardsdatascience.com/hyperparameter-tuning-the-random-forest-in-python-using-scikit-learn-28d2aa77dd74
+        # and https://github.com/elsonidoq/ml-practico-2022/blob/main/notebooks/taller-model-selection/03-model_selection.ipynb
+        return {
+            'bootstrap': hp.choice('bootstrap', [True, False]),
+            'n_estimators': hp.quniform('n_estimators', 100, 500, 100),
+            'max_features': hp.choice('max_features', ["sqrt"]),
+            'max_depth': hp.quniform('max_depth', 10, 110, 10),
+            'min_samples_split': hp.choice('min_samples_split', [2, 5, 10]),
+            'min_samples_leaf': hp.choice('min_samples_leaf', [1, 2, 4]),
+            #'learning_rate': hp.qloguniform('learning_rate', np.log(0.04), np.log(0.17), 0.01)
+            #'reg_alpha': hp.choice('ra', [0, hp.quniform('reg_alpha', 0.01, 0.1, 0.01)])
+        }
+    def objective(self, params: dict) -> dict:
+        params['n_estimators'] = int(params['n_estimators'])
+        params['max_depth'] = int(params['max_depth'])
+        params['min_samples_split'] = int(params['min_samples_split'])
+        params['min_samples_leaf'] = int(params['min_samples_leaf'])
+        t0 = time()
+        X_train, X_test, y_train, y_test = self.ttsi.get()
+        clf = RandomForestClassifier(random_state=1234, n_jobs=1, verbose=0, **params).fit(X_train,y_train)
+        train_time = time() - t0
+        y_pred = clf.predict(X_test)
+        y_pred_proba = clf.predict_proba(X_test)
+        y_train_pred_proba = clf.predict_proba(X_train)
+        rmse = sklearn.metrics.mean_squared_error(y_test, y_pred)
+        score = sklearn.metrics.log_loss(y_test, y_pred_proba, labels=clf.classes_)
+        score_train = sklearn.metrics.log_loss(y_train, y_train_pred_proba, labels=clf.classes_)
+
+        return dict(
+            rmse=rmse,
+            loss=score, 
+            tr_loss=score_train,
+            params=params,
+            train_time=train_time,
+            status=STATUS_OK
+        )
 
 class LGBM(Recommender):
     def name(self) -> str:
