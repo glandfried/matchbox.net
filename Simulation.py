@@ -31,7 +31,6 @@ def generateItems(numItems, budget, a=0.5, b=0.5):
         traits = total_percentages * budget #Por que vinculé el budget a la cantidad de traits?
         traits *= np.array([-1 if x==1 else 1 for x in binom.rvs(n=1, p=0.5, size=5)])
         res.append(traits)
-
     return res
 
 def generateThresholds(num):
@@ -47,7 +46,7 @@ def generateThresholds(num):
 
 def plotGaussian(mean, var, name, path="./tmp"):
     grilla = list(np.arange(0,1,0.01))
-    plt.plot(grilla, norm.pdf(grilla, mean, var), '-', title=f'{name} - mean:{mean}, var:{var}')
+    plt.plot(grilla, norm.pdf(grilla, mean, np.sqrt(var)), '-', title=f'{name} - mean:{mean}, var:{var}')
     plt.savefig(f"{path}/{name}.png")
     plt.close()
 
@@ -59,7 +58,7 @@ def plotThresholds(gauss, user, path="./tmp", truth=None):
             for i, g in zip(range(len(gauss)), gauss):
                 mean = g.GetMean()
                 var = g.GetVariance()
-                p = plt.plot(grilla, norm.pdf(grilla, mean, var), '-', label=f'{i}: ({mean:.1f}, {var:.1f}){f" [{truth[i]:.1f}]" if truth is not None else ""}')
+                p = plt.plot(grilla, norm.pdf(grilla, mean, np.sqrt(var)), '-', label=f'{i}: ({mean:.1f}, {var:.1f}){f" [{truth[i]:.1f}]" if truth is not None else ""}')
                 col = p[0].get_color()
                 if not np.isinf(mean):
                     if var == 0:
@@ -68,8 +67,8 @@ def plotThresholds(gauss, user, path="./tmp", truth=None):
                     if truth is not None:
                         # If truth was provided, plot it for this threshold ina  grey dotted line
                         plt.axvline(truth[i], ymin=0 , ymax=1, color="tab:gray", linestyle="--", alpha=0.4)
-                    #plt.stem(mean, norm.pdf(mean, mean, var), col)
-                    plt.vlines(mean, ymin=0 , ymax=norm.pdf(mean, mean, var), color=col, alpha=0.5)
+                    #plt.stem(mean, norm.pdf(mean, mean, np.sqrt(var)), col)
+                    plt.vlines(mean, ymin=0 , ymax=norm.pdf(mean, mean, np.sqrt(var)), color=col, alpha=0.5)
                     #plt.text(mean, -.05, f'thr_{i}', color=col, ha='center', va='top')
 
     plt.title(f"User {user} thresholds")
@@ -93,7 +92,7 @@ def plotItemTraits(gauss, item, isUser=False, path="./tmp", truth=None):
         for i, ax, g in zip(range(len(gauss)), axes.flatten(), gauss):
             mean = g.GetMean()
             var = g.GetVariance()
-            ax.plot(grilla, norm.pdf(grilla, mean, var), '-', label=f'{i}: ({mean:.1f}, {var:.1f}){f" [{truth[i]:.1f}]" if truth is not None else ""}')
+            ax.plot(grilla, norm.pdf(grilla, mean, np.sqrt(var)), '-', label=f'{i}: ({mean:.1f}, {var:.1f}){f" [{truth[i]:.1f}]" if truth is not None else ""}')
             ax.legend()
             if truth is not None:
                 # If truth was provided, plot it for this threshold ina  grey dotted line
@@ -103,7 +102,7 @@ def plotItemTraits(gauss, item, isUser=False, path="./tmp", truth=None):
         for i, g in zip(range(len(gauss)), gauss):
             mean = g.GetMean()
             var = g.GetVariance()
-            p = plt.plot(grilla, norm.pdf(grilla, mean, var), '-', label=f'{i}: ({mean:.2f}, {var:.2f}){f" [{truth[i]:.2f}]" if truth is not None else ""}')
+            p = plt.plot(grilla, norm.pdf(grilla, mean, np.sqrt(var)), '-', label=f'{i}: ({mean:.2f}, {var:.2f}){f" [{truth[i]:.2f}]" if truth is not None else ""}')
             col = p[0].get_color()
             if not np.isinf(mean):
                 #if var == 0:
@@ -112,8 +111,8 @@ def plotItemTraits(gauss, item, isUser=False, path="./tmp", truth=None):
                 if truth is not None:
                     # If truth was provided, plot it for this threshold ina  grey dotted line
                     plt.axvline(truth[i], ymin=0 , ymax=1, color=col, linewidth=1, alpha=0.6)
-                #plt.stem(mean, norm.pdf(mean, mean, var), col)
-                #plt.vlines(mean, ymin=0 , ymax=norm.pdf(mean, mean, var), color=col, alpha=0.5)
+                #plt.stem(mean, norm.pdf(mean, mean, np.sqrt(var)), col)
+                #plt.vlines(mean, ymin=0 , ymax=norm.pdf(mean, mean, np.sqrt(var)), color=col, alpha=0.5)
                 #plt.text(mean, -.05, f'thr_{i}', color=col, ha='center', va='top')
 
     plt.title(f'Traits of {"item" if not isUser else "user"} {item}')
@@ -359,6 +358,6 @@ if __name__ == "__main__":
     path = f"./data/Simulation/"
     #path += datetime.today().strftime('%Y%m%d_%H-%M-%S')
     path += "mbox_train_20230915"
-    generated_users, generated_items, estimated_users, estimated_items = Simulation(path, generate_data=False)
-    #SimulationPlots(path)
-    SimulationPlots(path, generated_users, generated_items, estimated_users, estimated_items)
+    #generated_users, generated_items, estimated_users, estimated_items = Simulation(path, generate_data=True)
+    SimulationPlots(path)
+    #SimulationPlots(path, generated_users, generated_items, estimated_users, estimated_items)
