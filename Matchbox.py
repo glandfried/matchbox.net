@@ -165,7 +165,10 @@ class Matchbox(Recommender):
         return y_pred, y_pred_proba, y_train_pred_proba
 
     def createRecommender(self, params):
-        dataMapping = DataframeMapping() if self.fromDataframe is None else CsvMapping()
+        if "numLevels" in params: 
+            dataMapping = DataframeMapping(0, int(params["numLevels"])) if self.fromDataframe is None else CsvMapping(0, int(params["numLevels"]), ",")
+        else:
+            dataMapping = DataframeMapping() if self.fromDataframe is None else CsvMapping()
         recommender = MatchboxCsvWrapper.Create(dataMapping)
         # Settings: https://dotnet.github.io/infer/userguide/Learners/Matchbox/API/Setting%20up%20a%20recommender.html
         recommender.Settings.Training.TraitCount = int(params["traitCount"])
@@ -189,26 +192,32 @@ class Matchbox(Recommender):
 
         return dfTest
     
-    def labels(self):
-        return [0,1,2,3,4,5]
+    def labels(self, traitCount):
+        return list(range(traitCount+1))
+    
+    def correct_probas(self, y_true, y_pred_proba, labels):
+        y_true_idx = [labels.index(i) for i in y_true]
+        #return np.prod([y_pred_proba[i][y_true_idx[i]] for i in range(len(y_pred_proba))])
+        return [y_pred_proba[i][y_true_idx[i]] for i in range(len(y_pred_proba))]
 
-    def objective(self, params: dict) -> dict:
+    def objective(self, params: dict, return_pred: bool=False) -> dict:
+        trait_count = int(params["traitCount"])
         recommender = self.createRecommender(params)
         train_time = self.train(recommender)
         print("Finished training")
 
         y_pred, y_pred_proba, y_train_pred_proba = self.predict(recommender)
-        _, _, y_train, y_test = self.ttsi.get()
+        _, X_test, y_train, y_test = self.ttsi.get()
         rmse = sklearn.metrics.mean_squared_error(y_test, y_pred)
-        score = sklearn.metrics.log_loss(y_test, y_pred_proba, labels=self.labels()) #TODO: check we're getting 6 probas instead of 5. Other algos are using 1-5 labels i think
-        score_train = sklearn.metrics.log_loss(y_train, y_train_pred_proba, labels=self.labels())
+        score = sklearn.metrics.log_loss(y_test, y_pred_proba, labels=self.labels(trait_count))
+        score_train = sklearn.metrics.log_loss(y_train, y_train_pred_proba, labels=self.labels(trait_count))
         
         #rmse = sklearn.metrics.mean_squared_error(y_test, y_pred)
         #score = sklearn.metrics.log_loss(y_test, y_pred_proba, labels=[1,2,3,4,5])
         #score_manual = evidence(y_test, y_pred_proba, labels=[1,2,3,4,5])
         #posterior = recommender.PredictDistribution(ui.user, ui.item);
         #predRating = recommender.Predict(ui.user, ui.item);
-        return dict(
+        res = dict(
             rmse=rmse,
             loss=score, 
             tr_loss=score_train,
@@ -216,3 +225,9 @@ class Matchbox(Recommender):
             train_time=train_time,
             status=STATUS_OK
         )
+        if return_pred:
+            df = pd.DataFrame.from_dict({"userId":X_test["userId"], "movieId":X_test["movieId"], "y_test": y_test})
+            df["y_pred"]=pd.Series(y_pred)
+            df["y_pred_proba"]=pd.Series(self.correct_probas(y_test, y_pred_proba, self.labels(trait_count)))
+            res["pred"] = df
+        return res

@@ -13,34 +13,33 @@ from datetime import datetime
 import warnings
 from InfernetWrapper import Gaussian
 
-numItems = 100
-numUsers = 100
-numFeatures = 5
-numObs = 10_000
-budget = numFeatures
+numUsers = 200
+numItems = 200
+numFeatures = 2
+numLevels = 2
+numObs = 20000
+affinityNoisePrecision = np.sqrt(0.1)
+thresholdNoisePrecision = np.sqrt(0.1)
+printAsStrings = True
 
 def get_immediate_subdirectories(a_dir):
     return [name for name in os.listdir(a_dir)
             if os.path.isdir(os.path.join(a_dir, name))]
 
-def generateItems(numItems, budget, a=0.5, b=0.5):
+def generateItems(numItems):
     res = []
     for i in range(numItems):
-        ls = beta.rvs(a, b, size=5)
-        total_percentages = ((ls/np.sum(ls)))
-        traits = total_percentages * budget #Por que vinculé el budget a la cantidad de traits?
-        traits *= np.array([-1 if x==1 else 1 for x in binom.rvs(n=1, p=0.5, size=5)])
+        traits = norm.rvs(0, 1, size=numFeatures)
         res.append(traits)
     return res
 
 def generateThresholds(num):
     res = []
     for _ in range(num):
-        baseThresholds = [-2.55, -1.16, 0.0, 1.19, 2.69] #Gaussian.FromMeanAndVariance(l - numLevels / 2.0 + 0.5, 1.0)
-        noise = [x + norm.rvs(0,0.44) for x in baseThresholds]
-        thresholds = [-np.inf] + noise + [np.inf]
-        thresholds[3] = 0.0 #Matchbox seems to fix side and middle thresholds in -inf, 0, +inf
-        assert([thresholds[i] > thresholds[i-1]+0.1 for i in range(1, len(thresholds)-1)])
+        userThresholdsPrior = [l - numLevels / 2.0 + 0.5 for l in range(numLevels)]
+        thresholds = [norm.rvs(mean,1) for mean in userThresholdsPrior]
+        thresholds = [-np.inf] + thresholds + [np.inf]
+        #thresholds[3] = 0.0 #Matchbox seems to fix side and middle thresholds in -inf, 0, +inf
         res.append(thresholds)
     return res
 
@@ -50,7 +49,7 @@ def plotGaussian(mean, var, name, path="./tmp"):
     plt.savefig(f"{path}/{name}.png")
     plt.close()
 
-def plotThresholds(gauss, user, path="./tmp", truth=None):
+def plotThresholds(gauss, user, path="./tmp", truth=None, gauss_pred=None):
     grilla = list(np.arange(-5,5,0.1))
     with np.errstate(divide='ignore', invalid="ignore"):
         with warnings.catch_warnings():
@@ -66,10 +65,19 @@ def plotThresholds(gauss, user, path="./tmp", truth=None):
                         plt.axvline(mean, ymin=0 , ymax=1, color=col, alpha=0.5)
                     if truth is not None:
                         # If truth was provided, plot it for this threshold ina  grey dotted line
-                        plt.axvline(truth[i], ymin=0 , ymax=1, color="tab:gray", linestyle="--", alpha=0.4)
+                        plt.axvline(truth[i], ymin=0 , ymax=1, color=col, linewidth=1, alpha=0.6)
                     #plt.stem(mean, norm.pdf(mean, mean, np.sqrt(var)), col)
-                    plt.vlines(mean, ymin=0 , ymax=norm.pdf(mean, mean, np.sqrt(var)), color=col, alpha=0.5)
+                    ## plot means:
+                    #plt.vlines(mean, ymin=0 , ymax=norm.pdf(mean, mean, np.sqrt(var)), color=col, alpha=0.5)
                     #plt.text(mean, -.05, f'thr_{i}', color=col, ha='center', va='top')
+
+            if gauss_pred is not None:
+                mean = g.GetMean()
+                var = g.GetVariance()
+                p = plt.plot(grilla, norm.pdf(grilla, mean, np.sqrt(var)), '-', color="tab:gray", label=f'{i}: ({mean:.1f}, {var:.1f}){f" [{truth[i]:.1f}]" if truth is not None else ""}')
+                col = p[0].get_color()
+                plt.vlines(mean, ymin=0 , ymax=norm.pdf(mean, mean, np.sqrt(var)), color=col, alpha=0.5)
+
 
     plt.title(f"User {user} thresholds")
     plt.legend()
@@ -125,10 +133,18 @@ def dummyRatingsTestSplitFile(folder):
       file.write(f"2,2,2,999\n")
 
 def GenerateData():
-    affinityNoiseVariance = 0.44
-    thresholdNoiseVariance = 0.44
-    itemTraits = generateItems(numItems, numFeatures)
-    userTraits = generateItems(numUsers, numFeatures)
+    itemTraits = generateItems(numItems)
+    itemTraits[0][0] = 1
+    itemTraits[0][1] = 0
+    itemTraits[1][0] = 0
+    itemTraits[1][1] = 1
+    itemTraits[2][0] = 0.44
+    itemTraits[2][1] = -1.10
+    itemTraits[3][0] = -0.38
+    itemTraits[3][1] = -0.83
+    itemTraits[4][0] = 0.11
+    itemTraits[4][1] = 0.68
+    userTraits = generateItems(numUsers)
     itemBias = norm.rvs(0,1,size=numItems)
     userBias = norm.rvs(0,1,size=numUsers)
     UserThresholds = generateThresholds(numUsers)
@@ -154,8 +170,11 @@ def GenerateData():
         while iObs < numObs:
             user = random.randrange(numUsers)
             item = random.randrange(numItems)
+            if iObs < numFeatures:
+                user = iObs
+                item = iObs
             userItemPairID = user * numItems + item #pair encoding  
-
+            
             if userItemPairID in visited: #duplicate generated
                 continue #redo this iteration with different user-item pair
 
@@ -164,8 +183,8 @@ def GenerateData():
             products = np.array(userTraits[user]) * np.array(itemTraits[item])
             bias = userBias[user] + itemBias[item]
             affinity = bias + np.sum(products)
-            noisyAffinity = norm.rvs(affinity, affinityNoiseVariance)
-            noisyThresholds = [norm.rvs(ut, thresholdNoiseVariance) for ut in UserThresholds[user]]
+            noisyAffinity = norm.rvs(affinity, affinityNoisePrecision)
+            noisyThresholds = [norm.rvs(ut, thresholdNoisePrecision) for ut in UserThresholds[user]]
 
             generatedUserData.append(user);  
             generatedItemData.append(item)
@@ -196,13 +215,13 @@ def RomperSimetriaEsImportante():
         ttsi.loadDatasets(preprocessed=True, NROWS=None, BATCH_SIZE=None)
         mbox=Matchbox(ttsi, max_trials=1)
         params = mbox.bestParams()
-        params["traitCount"] = 5
+        params["traitCount"] = numFeatures
         recommender = mbox.createRecommender(params)
         _ = mbox.train(recommender)
 
         userPosteriors = recommender.GetPosteriorDistributions().Users
         itemPosteriors = recommender.GetPosteriorDistributions().Items
-        
+
         for user in userPosteriors.Keys:
             posteriors = userPosteriors.get_Item(user)
             #os.makedirs(f"./tmp/user{user}", exist_ok=True)
@@ -230,11 +249,17 @@ def formatNumToString(var):
     return var
 
 def GaussianToString(g):
-    if g.IsPointMass:
-        return f"Gaussian.PointMass({formatNumToString(g.Point)})"
+    if printAsStrings:
+        if g.IsPointMass:
+            return f"Gaussian.PointMass({formatNumToString(g.Point)})"
+        else:
+            return f"Gaussian({formatNumToString(g.GetMean())}, {formatNumToString(g.GetVariance())})"  
     else:
-        return f"Gaussian({formatNumToString(g.GetMean())}, {formatNumToString(g.GetVariance())})"  
-
+        if g.IsPointMass:
+            return f"{formatNumToString(g.Point)}"
+        else:
+            return f"{formatNumToString(g.GetMean())}"  
+        
 def addEstimatedValues(df, user, thr=None, tra=None, bias=None):
     if thr is not None:
         if type(thr[0]) == Gaussian:
@@ -271,7 +296,27 @@ def addEstimatedValues(df, user, thr=None, tra=None, bias=None):
             df.loc[user, f'Bias'] = bias
     return df
 
-def SimulationPlots(path, generated_users=None, generated_items=None, estimated_users=None, estimated_items=None):
+def ncsm(g : Gaussian):
+    return g.mu**2+g.sigma2
+
+def msg2(margS, margT):
+    res = []
+    for k in range(len(margS)):
+        s = margS[k]
+        t = margT[k]
+        res.append(Gaussian(s.GetMean()*t.GetMean(), (ncsm(s)*ncsm(t)) - ((s.GetMean()**2)*(t.GetMean()**2))))
+    return res
+
+def ratingBias(ubias, vbias):
+    return Gaussian(ubias.GetMean()+vbias.GetMean(), np.sqrt(ubias.GetVariance() + vbias.GetVariance()))
+
+def ratingEstimate(b_post, user_post, item_post):
+    normZ = msg2(user_post, item_post)     
+    sumMuZ = sum([zk.GetMean() for zk in normZ])
+    sumSigma2Z = sum([zk.GetVariance() for zk in normZ])
+    return Gaussian(b_post.GetMean() + sumMuZ, np.sqrt(affinityNoisePrecision**2 + b_post.GetVariance() + sumSigma2Z))
+
+def LoadDatasets(path, generated_users, generated_items, estimated_users, estimated_items):
     generated_users = generated_users if generated_users is not None else pd.read_csv(f"{path}/user_truth.csv")
     generated_items = generated_items if generated_items is not None else pd.read_csv(f"{path}/item_truth.csv")
     estimated_users = estimated_users if estimated_users is not None else pd.read_csv(f"{path}/user_estimated.csv")
@@ -285,17 +330,38 @@ def SimulationPlots(path, generated_users=None, generated_items=None, estimated_
     userTraitMask_e = userTraitMask + [False]*(estimated_users.shape[1]-generated_users.shape[1])
     itemTraitMask_e = itemTraitMask + [False]*(estimated_items.shape[1]-generated_items.shape[1])
     
-    if "Gaussian" in estimated_users.loc[:,userThresholdMask_e].iloc[0,0]:
+    userBiasMask = ["Bias" in col for col in generated_users.columns]
+    itemBiasMask = ["Bias" in col for col in generated_items.columns]
+    userBiasMask_e = ["Bias" in col for col in estimated_users.columns]
+    itemBiasMask_e = ["Bias" in col for col in estimated_items.columns]
+
+    if isinstance(estimated_users.loc[:,userThresholdMask_e].iloc[0,0], str) and "Gaussian" in estimated_users.loc[:,userThresholdMask_e].iloc[0,0]:
         for col in estimated_users.loc[:,userThresholdMask_e].columns:
             estimated_users[col] = [eval(x) for x in estimated_users[col]]
         for col in estimated_users.loc[:,userTraitMask_e].columns:
             estimated_users[col] = [eval(x) for x in estimated_users[col]]
         for col in estimated_items.loc[:,itemTraitMask_e].columns:
             estimated_items[col] = [eval(x) for x in estimated_items[col]]
+        for col in estimated_users.loc[:,userBiasMask_e].columns:
+            estimated_users[col] = [eval(x) for x in estimated_users[col]]
+        for col in estimated_items.loc[:,itemBiasMask_e].columns:
+            estimated_items[col] = [eval(x) for x in estimated_items[col]]
 
+    return generated_users, generated_items, estimated_users, estimated_items
+
+def SimulationPlots(path, generated_users=None, generated_items=None, estimated_users=None, estimated_items=None):
+    generated_users, generated_items, estimated_users, estimated_items = LoadDatasets(path, generated_users, generated_items, estimated_users, estimated_items)
     os.makedirs(path+"/users", exist_ok=True)
     os.makedirs(path+"/items", exist_ok=True)
-    
+
+    userThresholdMask = ["Threshold" in col for col in generated_users.columns]
+    userTraitMask = ["Trait" in col for col in generated_users.columns]
+    itemTraitMask = ["Trait" in col for col in generated_items.columns]
+
+    userThresholdMask_e = userThresholdMask + [False]*(estimated_users.shape[1]-generated_users.shape[1])
+    userTraitMask_e = userTraitMask + [False]*(estimated_users.shape[1]-generated_users.shape[1])
+    itemTraitMask_e = itemTraitMask + [False]*(estimated_items.shape[1]-generated_items.shape[1])
+
     print("Generating user plots....")
     for user in tqdm(generated_users["User"][:10], total=10): #generated_users.shape[0]):
         plotThresholds(estimated_users.iloc[user][userThresholdMask_e], user, path=path+"/users", truth=generated_users.iloc[int(user)][userThresholdMask])
@@ -304,6 +370,36 @@ def SimulationPlots(path, generated_users=None, generated_items=None, estimated_
     print("Generating item plots....")
     for item in tqdm(generated_items["Item"][:10], total=10): #generated_items.shape[0]):
         plotItemTraits(estimated_items.iloc[item][itemTraitMask_e], item, isUser=False, path=path+"/items", truth=generated_items.iloc[item][itemTraitMask])
+
+def RatingPlots(path, generated_users=None, generated_items=None, estimated_users=None, estimated_items=None):
+    generated_users, generated_items, estimated_users, estimated_items = LoadDatasets(path, generated_users, generated_items, estimated_users, estimated_items)
+
+    userThresholdMask = ["Threshold" in col for col in generated_users.columns]
+    userTraitMask = ["Trait" in col for col in generated_users.columns]
+    itemTraitMask = ["Trait" in col for col in generated_items.columns]
+
+    userThresholdMask_e = userThresholdMask + [False]*(estimated_users.shape[1]-generated_users.shape[1])
+    userTraitMask_e = userTraitMask + [False]*(estimated_users.shape[1]-generated_users.shape[1])
+    itemTraitMask_e = itemTraitMask + [False]*(estimated_items.shape[1]-generated_items.shape[1])
+
+    userBiasMask = ["Bias" in col for col in generated_users.columns]
+    itemBiasMask = ["Bias" in col for col in generated_items.columns]
+    userBiasMask_e = ["Bias" in col for col in estimated_users.columns]
+    itemBiasMask_e = ["Bias" in col for col in estimated_items.columns]
+
+    os.makedirs(path+"/ratings", exist_ok=True)
+    df = pd.read_csv(f"{path}/ratings_test.csv")
+
+    for i in range(len(df)):
+        rating = df.iloc[i]
+        user = rating[0] #0 = userId column
+        item = rating[1] #1 = movieId column
+        user_post = estimated_users.iloc[user]
+        item_post = estimated_items.iloc[item]
+        b_post = ratingBias(user_post[userBiasMask_e], item_post[itemBiasMask_e])
+        gauss_pred = ratingEstimate(b_post ,item_post, user_post)
+        plotThresholds(estimated_users.iloc[user][userThresholdMask_e], user, path=path+"/users", truth=generated_users.iloc[int(user)][userThresholdMask], gauss_pred=gauss_pred)
+        
 
 def GetPosteriors(recommender, path):
     userPosteriors = recommender.GetPosteriorDistributions().Users
@@ -327,6 +423,8 @@ def GetPosteriors(recommender, path):
         #plotItemTraits(posteriors.Traits, item, isUser=False, path=path+"/items", truth=generated_items.iloc[int(item)][itemTraitMask])
         estimated_items = addEstimatedValues(estimated_items, int(item), tra=posteriors.Traits, bias=posteriors.Bias)
     
+    estimated_users.dropna(inplace=True)
+    estimated_items.dropna(inplace=True)
     estimated_users.to_csv(f"{path}/user_estimated.csv", header=True, index=False)
     estimated_items.to_csv(f"{path}/item_estimated.csv", header=True, index=False)
 
@@ -354,10 +452,19 @@ def Simulation(path, generate_data=True):
     #SimulationPlots(path, generated_users, generated_items, estimated_users, estimated_items)
     return generated_users, generated_items, estimated_users, estimated_items
 
+def Today():
+    return datetime.today().strftime('%Y%m%d_%H-%M-%S')
+
 if __name__ == "__main__":
     path = f"./data/Simulation/"
-    #path += datetime.today().strftime('%Y%m%d_%H-%M-%S')
-    path += "mbox_train_20230915"
-    #generated_users, generated_items, estimated_users, estimated_items = Simulation(path, generate_data=True)
+    """
+    path += Today()
+    generated_users, generated_items, estimated_users, estimated_items = Simulation(path, generate_data=True)
+    SimulationPlots(path, generated_users, generated_items, estimated_users, estimated_items)
+    
+    path += "20230922_15-19-33"
     SimulationPlots(path)
-    #SimulationPlots(path, generated_users, generated_items, estimated_users, estimated_items)
+    """
+    path += "simulation_20230922_15-53-20"
+    #generated_users, generated_items, estimated_users, estimated_items = Simulation(path, generate_data=False)
+    RatingPlots(path)
