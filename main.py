@@ -41,6 +41,7 @@ df_mbox=mbox.bestCandidates()
 
 mbox=Matchbox(ttsi, max_trials=1)
 params = mbox.bestParams()
+params["iterationCount"] = 1
 params["traitCount"] = 2
 params["numLevels"] = 2
 dict=mbox.objective(params, return_pred=True)

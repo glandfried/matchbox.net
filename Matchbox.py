@@ -174,23 +174,55 @@ class Matchbox(Recommender):
         recommender.Settings.Training.TraitCount = int(params["traitCount"])
         recommender.Settings.Training.IterationCount = int(params["iterationCount"])
         #recommender.Settings.Training.BatchCount = 2000
+        if "lossFunction" in params:
+            recommender.Settings.Prediction.SetPredictionLossFunction(params["lossFunction"])
         return recommender
 
-    def predictionResults(self):
-        recommender = self.createRecommender(self.bestParams())
-        train_time = self.train(recommender)
-        print("Finished training")
+    def predictionStats(self, params, train_time, y_pred, y_pred_proba, y_train_pred_proba, y_train, y_test):
+        rmse = sklearn.metrics.mean_squared_error(y_test, y_pred)
+        score = sklearn.metrics.log_loss(y_test, y_pred_proba, labels=self.labels(int(params["traitCount"])))
+        score_train = sklearn.metrics.log_loss(y_train, y_train_pred_proba, labels=self.labels(int(params["traitCount"])))
+        
+        #rmse = sklearn.metrics.mean_squared_error(y_test, y_pred)
+        #score = sklearn.metrics.log_loss(y_test, y_pred_proba, labels=[1,2,3,4,5])
+        #score_manual = evidence(y_test, y_pred_proba, labels=[1,2,3,4,5])
+        #posterior = recommender.PredictDistribution(ui.user, ui.item);
+        #predRating = recommender.Predict(ui.user, ui.item);
+        return dict(
+            rmse=rmse,
+            loss=score, 
+            tr_loss=score_train,
+            params=params,
+            train_time=train_time,
+            status=STATUS_OK
+        )
+
+    def predictionResults(self, params=None, pretrained_recommender=None):
+        params = self.bestParams() if params is None else params
+        if pretrained_recommender is None:
+            recommender = self.createRecommender(params)
+            train_time = self.train(recommender)
+            print("Finished training")
+        else:
+            print("Using pretrained recommender")
+            recommender = pretrained_recommender
+            train_time = 0.0
 
         y_pred, y_pred_proba, y_train_pred_proba = self.predict(recommender)
-        _, x_test, _, y_test = self.ttsi.get()
+        _, x_test, y_train, y_test = self.ttsi.get()
+
         dfTest = pd.concat([x_test, y_test], axis=1, sort=False)
         dfTest = dfTest.reindex(columns=[0,1,2,3])
         dfTest = dfTest.rename(columns={0:"userId",1:"movieId", 2:"y_test", 3:"timestamp"})
         dfTest["y_pred"] = y_pred
+        dfTest["y_pred_proba"]=pd.Series(self.correct_probas(y_test, y_pred_proba, self.labels(int(params["traitCount"]))))
         for i in range(len(y_pred_proba[0])):
             dfTest[f"y_proba_{i+1}"] = [a[i] for a in y_pred_proba]
 
-        return dfTest
+        dict = self.predictionStats(params, train_time, y_pred, y_pred_proba, y_train_pred_proba, y_train, y_test)
+        dfStats = self._addOtherStats(pd.DataFrame.from_dict({k: [v] for k, v in dict.items()}))
+        
+        return dfTest, dfStats
     
     def labels(self, traitCount):
         return list(range(traitCount+1))
@@ -201,23 +233,24 @@ class Matchbox(Recommender):
         return [y_pred_proba[i][y_true_idx[i]] for i in range(len(y_pred_proba))]
 
     def objective(self, params: dict, return_pred: bool=False) -> dict:
-        trait_count = int(params["traitCount"])
         recommender = self.createRecommender(params)
         train_time = self.train(recommender)
         print("Finished training")
 
         y_pred, y_pred_proba, y_train_pred_proba = self.predict(recommender)
-        _, X_test, y_train, y_test = self.ttsi.get()
+        _, _, y_train, y_test = self.ttsi.get()
+
+        return self.predictionStats(params, train_time, y_pred, y_pred_proba, y_train_pred_proba, y_train, y_test)
         rmse = sklearn.metrics.mean_squared_error(y_test, y_pred)
-        score = sklearn.metrics.log_loss(y_test, y_pred_proba, labels=self.labels(trait_count))
-        score_train = sklearn.metrics.log_loss(y_train, y_train_pred_proba, labels=self.labels(trait_count))
+        score = sklearn.metrics.log_loss(y_test, y_pred_proba, labels=self.labels(int(params["traitCount"])))
+        score_train = sklearn.metrics.log_loss(y_train, y_train_pred_proba, labels=self.labels(int(params["traitCount"])))
         
         #rmse = sklearn.metrics.mean_squared_error(y_test, y_pred)
         #score = sklearn.metrics.log_loss(y_test, y_pred_proba, labels=[1,2,3,4,5])
         #score_manual = evidence(y_test, y_pred_proba, labels=[1,2,3,4,5])
         #posterior = recommender.PredictDistribution(ui.user, ui.item);
         #predRating = recommender.Predict(ui.user, ui.item);
-        res = dict(
+        return dict(
             rmse=rmse,
             loss=score, 
             tr_loss=score_train,
@@ -225,9 +258,3 @@ class Matchbox(Recommender):
             train_time=train_time,
             status=STATUS_OK
         )
-        if return_pred:
-            df = pd.DataFrame.from_dict({"userId":X_test["userId"], "movieId":X_test["movieId"], "y_test": y_test})
-            df["y_pred"]=pd.Series(y_pred)
-            df["y_pred_proba"]=pd.Series(self.correct_probas(y_test, y_pred_proba, self.labels(trait_count)))
-            res["pred"] = df
-        return res

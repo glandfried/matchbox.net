@@ -131,15 +131,18 @@ class Recommender():
         """Set parameter space for trials."""
         self.space = space
 
+    def _addOtherStats(self, df):
+        df["geo_mean"] = np.exp(-df["loss"]) #prediccion promedio, porque si en una productoria de las predicciones reemplazas todas las preds por el valor de la media geometrica, sale este
+        if "tr_loss" in df.columns:
+            df["geo_mean_tr"] = np.exp(-df["tr_loss"])
+        df["dataset_size"] = self.ttsi.size
+        return df
+
     def bestCandidates(self):
         """Perform trials over parameter space and return best candidates."""
         trials = Trials()
         best = fmin(lambda x: self.objective(x), self.space, algo=tpe.suggest, max_evals=self.max_trials, trials=trials)
-        best = self._formatOutput(trials)
-        best["geo_mean"] = np.exp(-best["loss"]) #prediccion promedio, porque si en una productoria de las predicciones reemplazas todas las preds por el valor de la media geometrica, sale este
-        if "tr_loss" in best.columns:
-            best["geo_mean_tr"] = np.exp(-best["tr_loss"])
-        best["dataset_size"] = self.ttsi.size
+        best = self._addOtherStats(self._formatOutput(trials))
         best.to_csv(f"./trials/{self.resultsName()}.csv", header=True, index=False)
         return best
     

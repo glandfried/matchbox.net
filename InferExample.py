@@ -12,6 +12,8 @@ from tqdm import tqdm
 from datetime import datetime
 import warnings
 from InfernetWrapper import Gaussian
+from InfernetWrapper import LossFunction
+import sys
 
 numUsers = 200
 numItems = 200
@@ -21,6 +23,12 @@ numObs = 20000
 affinityNoisePrecision = np.sqrt(0.1)
 thresholdNoisePrecision = np.sqrt(0.1)
 printAsStrings = True
+
+def GaussSub(g1, g2):
+    if (isinstance(g2, int) and g2 == 0):
+        return g1
+    elif (isinstance(g2, Gaussian)):
+        return Gaussian(g1.GetMean()-g2.GetMean(), np.sqrt(g1.GetVariance()+g2.GetVariance()))
 
 def get_immediate_subdirectories(a_dir):
     return [name for name in os.listdir(a_dir)
@@ -49,7 +57,7 @@ def plotGaussian(mean, var, name, path="./tmp"):
     plt.savefig(f"{path}/{name}.png")
     plt.close()
 
-def plotThresholds(gauss, user, path="./tmp", truth=None, gauss_pred=None):
+def plotThresholds(gauss, user, path="./tmp", truth=None):
     grilla = list(np.arange(-5,5,0.1))
     with np.errstate(divide='ignore', invalid="ignore"):
         with warnings.catch_warnings():
@@ -65,23 +73,52 @@ def plotThresholds(gauss, user, path="./tmp", truth=None, gauss_pred=None):
                         plt.axvline(mean, ymin=0 , ymax=1, color=col, alpha=0.5)
                     if truth is not None:
                         # If truth was provided, plot it for this threshold ina  grey dotted line
-                        plt.axvline(truth[i], ymin=0 , ymax=1, color=col, linewidth=1, alpha=0.6)
+                        plt.axvline(truth[i], ymin=0 , ymax=1, color=col, linestyle="--", linewidth=1, alpha=0.6)
                     #plt.stem(mean, norm.pdf(mean, mean, np.sqrt(var)), col)
-                    ## plot means:
-                    #plt.vlines(mean, ymin=0 , ymax=norm.pdf(mean, mean, np.sqrt(var)), color=col, alpha=0.5)
+                    # plot means:
+                    plt.vlines(mean, ymin=0 , ymax=norm.pdf(mean, mean, np.sqrt(var)), color=col, alpha=0.2)
                     #plt.text(mean, -.05, f'thr_{i}', color=col, ha='center', va='top')
-
-            if gauss_pred is not None:
-                mean = g.GetMean()
-                var = g.GetVariance()
-                p = plt.plot(grilla, norm.pdf(grilla, mean, np.sqrt(var)), '-', color="tab:gray", label=f'{i}: ({mean:.1f}, {var:.1f}){f" [{truth[i]:.1f}]" if truth is not None else ""}')
-                col = p[0].get_color()
-                plt.vlines(mean, ymin=0 , ymax=norm.pdf(mean, mean, np.sqrt(var)), color=col, alpha=0.5)
-
 
     plt.title(f"User {user} thresholds")
     plt.legend()
     plt.savefig( f"{path}/user{user}_thresholds.png")
+    plt.close()
+
+def plotRatingInThresholds(gauss, gauss_pred, rating_data, path="./tmp", truth=None):
+    user = rating_data[0] #0 = userId column
+    item = rating_data[1] #1 = movieId column
+    rating_truth = rating_data[2] #2 = y_test column
+    rating_pred = rating_data[3] #3 = y_pred column
+    grilla = list(np.arange(-5,5,0.1))
+    with np.errstate(divide='ignore', invalid="ignore"):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            for i, g in zip(range(len(gauss)), gauss):
+                mean = g.GetMean()
+                var = g.GetVariance()
+                p = plt.plot(grilla, norm.pdf(grilla, mean, np.sqrt(var)), '-', label=f'{i}: ({mean:.1f}, {var:.1f}){f" [{truth[i]:.1f}]" if truth is not None else ""}')
+                col = p[0].get_color()
+                if not np.isinf(mean):
+                    if var == 0:
+                        # If variance is 0 (middle threshold), print line in x=mean from bottom to top of graph
+                        plt.axvline(mean, ymin=0 , ymax=1, color=col, alpha=0.5)
+                    if truth is not None:
+                        # If truth was provided, plot it for this threshold ina  grey dotted line
+                        plt.axvline(truth[i], ymin=0 , ymax=1, color=col, linestyle="--", linewidth=1, alpha=0.6)
+                    #plt.stem(mean, norm.pdf(mean, mean, np.sqrt(var)), col)
+                    # plot means:
+                    plt.vlines(mean, ymin=0 , ymax=norm.pdf(mean, mean, np.sqrt(var)), color=col, alpha=0.2)
+                    #plt.text(mean, -.05, f'thr_{i}', color=col, ha='center', va='top')
+
+            mean = gauss_pred.GetMean()
+            var = gauss_pred.GetVariance()
+            p = plt.plot(grilla, norm.pdf(grilla, mean, np.sqrt(var)), '-', color="tab:gray", label=f'r: ({mean:.1f}, {var:.1f}), [truth:{rating_truth}, pred:{rating_pred}]')
+            col = p[0].get_color()
+            plt.vlines(mean, ymin=0 , ymax=norm.pdf(mean, mean, np.sqrt(var)), color=col, alpha=0.5)
+
+    plt.title(f"User {user}'s rating of item {item}")
+    plt.legend()
+    plt.savefig( f"{path}/{user}-{item}.png")
     plt.close()
 
 def plotItemTraits(gauss, item, isUser=False, path="./tmp", truth=None):
@@ -297,7 +334,7 @@ def addEstimatedValues(df, user, thr=None, tra=None, bias=None):
     return df
 
 def ncsm(g : Gaussian):
-    return g.mu**2+g.sigma2
+    return g.GetMean()**2+g.GetVariance()
 
 def msg2(margS, margT):
     res = []
@@ -371,7 +408,7 @@ def SimulationPlots(path, generated_users=None, generated_items=None, estimated_
     for item in tqdm(generated_items["Item"][:10], total=10): #generated_items.shape[0]):
         plotItemTraits(estimated_items.iloc[item][itemTraitMask_e], item, isUser=False, path=path+"/items", truth=generated_items.iloc[item][itemTraitMask])
 
-def RatingPlots(path, generated_users=None, generated_items=None, estimated_users=None, estimated_items=None):
+def AddMyPred(path, generated_users=None, generated_items=None, estimated_users=None, estimated_items=None, maxPlots=None, file="preds.csv"):
     generated_users, generated_items, estimated_users, estimated_items = LoadDatasets(path, generated_users, generated_items, estimated_users, estimated_items)
 
     userThresholdMask = ["Threshold" in col for col in generated_users.columns]
@@ -388,20 +425,108 @@ def RatingPlots(path, generated_users=None, generated_items=None, estimated_user
     itemBiasMask_e = ["Bias" in col for col in estimated_items.columns]
 
     os.makedirs(path+"/ratings", exist_ok=True)
-    df = pd.read_csv(f"{path}/ratings_test.csv")
+    df = pd.read_csv(f"{path}/{file}")
 
-    for i in range(len(df)):
-        rating = df.iloc[i]
-        user = rating[0] #0 = userId column
-        item = rating[1] #1 = movieId column
+    maxPlots = len(df) if maxPlots is None else maxPlots
+    for i in tqdm(range(maxPlots), total=maxPlots):
+        rating = df.iloc[i].values[:4].astype(int)
+        user = rating[0]
+        item = rating[1]
         user_post = estimated_users.iloc[user]
         item_post = estimated_items.iloc[item]
-        b_post = ratingBias(user_post[userBiasMask_e], item_post[itemBiasMask_e])
-        gauss_pred = ratingEstimate(b_post ,item_post, user_post)
-        plotThresholds(estimated_users.iloc[user][userThresholdMask_e], user, path=path+"/users", truth=generated_users.iloc[int(user)][userThresholdMask], gauss_pred=gauss_pred)
+        b_post = ratingBias(user_post[userBiasMask_e][0], item_post[itemBiasMask_e][0])
+        gauss_pred = ratingEstimate(b_post, item_post[itemTraitMask_e], user_post[userTraitMask_e])
+        thr = estimated_users.iloc[user][userThresholdMask_e][1:-1]
+        expected_preds = {}
+        for i in range(len(thr)+1):
+            if i==0:
+                thi = 1 - GaussProd(gauss_pred, thr[i]).GetProbBetween(0, np.inf)
+            elif i == len(thr):
+                thi = GaussProd(gauss_pred, thr[i-1]).GetProbBetween(0, np.inf)
+            else:
+                thi = GaussProd(gauss_pred, thr[i-1]).GetProbBetween(0, np.inf) - GaussProd(gauss_pred, thr[i]).GetProbBetween(0, np.inf)
+            
+            expected_preds[f"Y_proba_{i}_exp"] = thi
         
+        assert(np.sum(expected_preds.values) == 1)
 
-def GetPosteriors(recommender, path):
+        df.loc[i, "expected_pred"] = int(np.sum([gauss_pred>t for t in thr])) #Gaussian comparison is implemented, and is how they do it in recommender tutorial
+        df.loc[i, "pred_gauss"] = GaussianToString(gauss_pred)
+
+    df.to_csv(f"{path}/{file}", header=True, index=False)
+
+
+def GaussMul(norm1, norm2):
+    sigma2Star = (1/norm1.GetVariance() + 1/norm2.GetVariance())**(-1) #c*N(mu, sigma) = N(c*mu, c*sigma) #TODO: agregar al pdf
+    muStar = norm1.GetMean()/norm1.GetVariance() + norm2.GetMean()/norm2.GetVariance()
+    muStar *= sigma2Star
+    #c = Gaussian(norm2.mu, np.sqrt(norm1.sigma2+norm2.sigma2)).eval(norm1.mu) #result should be multiplied by c, but is proportional to not multiplying by it
+    return Gaussian(muStar, np.sqrt(sigma2Star))
+
+def GaussProd(a:Gaussian , b :Gaussian ):
+    return a.op_Multiply(b)
+"""
+    res = Gaussian()
+    if (a.IsPointMass):
+        if (b.IsPointMass and not a.Point.Equals(b.Point)):
+            raise Exception("All Zero Exception")
+        res.set_Point(a.Point)
+    elif (b.IsPointMass):
+        res.set_Point(b.Point)
+    else:
+        Precision = a.Precision + b.Precision
+        MeanTimesPrecision = a.MeanTimesPrecision + b.MeanTimesPrecision
+        if (Precision > sys.float_info.max or abs(MeanTimesPrecision) > sys.float_info.max):
+            if (a.IsUniform()): 
+                res = b
+            elif (b.IsUniform()):
+                res = a
+            else:
+                # (am*ap + bm*bp)/(ap + bp) = am*w + bm*(1-w)
+                # w = 1/(1 + bp/ap)
+                w = 1 / (1 + b.Precision / a.Precision)
+                res.set_Point(a.GetMean() * w + b.GetMean() * (1 - w))
+    return res
+"""    
+
+def RatingPlots(path, generated_users=None, generated_items=None, estimated_users=None, estimated_items=None, maxPlots=None, file="preds.csv"):
+    generated_users, generated_items, estimated_users, estimated_items = LoadDatasets(path, generated_users, generated_items, estimated_users, estimated_items)
+
+    userThresholdMask = ["Threshold" in col for col in generated_users.columns]
+    userTraitMask = ["Trait" in col for col in generated_users.columns]
+    itemTraitMask = ["Trait" in col for col in generated_items.columns]
+
+    userThresholdMask_e = userThresholdMask + [False]*(estimated_users.shape[1]-generated_users.shape[1])
+    userTraitMask_e = userTraitMask + [False]*(estimated_users.shape[1]-generated_users.shape[1])
+    itemTraitMask_e = itemTraitMask + [False]*(estimated_items.shape[1]-generated_items.shape[1])
+
+    userBiasMask = ["Bias" in col for col in generated_users.columns]
+    itemBiasMask = ["Bias" in col for col in generated_items.columns]
+    userBiasMask_e = ["Bias" in col for col in estimated_users.columns]
+    itemBiasMask_e = ["Bias" in col for col in estimated_items.columns]
+
+    os.makedirs(path+"/ratings", exist_ok=True)
+    df = pd.read_csv(f"{path}/{file}")[["userId","movieId","y_test","y_pred","expected_pred","pred_gauss"]]
+    #df = df[(df["y_pred"] == df["y_test"]) & (df["y_pred"]==1)]
+    save_gauss = "pred_gauss" in df.columns
+
+    maxPlots = len(df) if maxPlots is None else maxPlots
+    for i in tqdm(range(maxPlots), total=maxPlots):
+        rating_data = df.iloc[i][:-1].values.astype(int)
+        user = rating_data[0]
+        gauss_pred = eval( df.iloc[i]["pred_gauss"] )
+        plotRatingInThresholds(estimated_users.iloc[user][userThresholdMask_e], rating_data=rating_data, gauss_pred=gauss_pred, path=path+"/ratings", truth=generated_users.iloc[int(user)][userThresholdMask])
+    
+def RatingStats(path, file="preds.csv"):
+    df = pd.read_csv(f"{path}/{file}")[["userId","movieId","y_test","y_pred","expected_pred","pred_gauss"]]
+    missed_matchbox = len(df[df["y_pred"] != df["y_test"]])
+    missed_mine = len(df[df["expected_pred"] != df["y_test"]])
+    pred_mismatchs = len(df[df["y_pred"] != df["expected_pred"]])
+    print(f"From {len(df)} ratings, there were {pred_mismatchs} prediction mismatches between Matchbox (1 iteration) and our calculations.")
+    print(f"Matchbox got {len(df)-missed_matchbox} right and {missed_matchbox} wrong ratings ({100-int(missed_matchbox*100/len(df))}% hit rate).")
+    print(f"We got {len(df)-missed_mine} right and {missed_mine} wrong ratings ({100-int(missed_mine*100/len(df))}% hit rate).")
+
+def GetPosteriors(recommender, path, readOnly=False):
     userPosteriors = recommender.GetPosteriorDistributions().Users
     itemPosteriors = recommender.GetPosteriorDistributions().Items
 
@@ -425,12 +550,13 @@ def GetPosteriors(recommender, path):
     
     estimated_users.dropna(inplace=True)
     estimated_items.dropna(inplace=True)
-    estimated_users.to_csv(f"{path}/user_estimated.csv", header=True, index=False)
-    estimated_items.to_csv(f"{path}/item_estimated.csv", header=True, index=False)
+    if not readOnly:
+        estimated_users.to_csv(f"{path}/user_estimated.csv", header=True, index=False)
+        estimated_items.to_csv(f"{path}/item_estimated.csv", header=True, index=False)
 
     return estimated_users, estimated_items
 
-def Simulation(path, generate_data=True):
+def Simulation(path, generate_data=True, readOnly=False):
     os.makedirs(path, exist_ok=True)
     if generate_data:
         df, generated_users, generated_items = GenerateData()
@@ -442,13 +568,23 @@ def Simulation(path, generate_data=True):
     ttsi.loadDatasets(preprocessed=True, NROWS=None, BATCH_SIZE=None)
     mbox=Matchbox(ttsi, max_trials=1)
     params = mbox.bestParams()
+    params["iterationCount"] = 1
     params["traitCount"] = numFeatures
+    params["numLevels"] = numLevels
     recommender = mbox.createRecommender(params)
     _ = mbox.train(recommender)
 
-    estimated_users, estimated_items = GetPosteriors(recommender, path)
+    estimated_users, estimated_items = GetPosteriors(recommender, path, readOnly=readOnly)
 
+    dfTest, dfStats = mbox.predictionResults(params, recommender)
+    
+    if not readOnly:
+        dfTest.to_csv(f"{path}/preds.csv", header=True, index=False)
+        dfStats.to_csv(f"{path}/stats.csv", header=True, index=False)
+
+    print(dfStats)
     print("Simulación terminada!")
+    
     #SimulationPlots(path, generated_users, generated_items, estimated_users, estimated_items)
     return generated_users, generated_items, estimated_users, estimated_items
 
@@ -465,6 +601,9 @@ if __name__ == "__main__":
     path += "20230922_15-19-33"
     SimulationPlots(path)
     """
-    path += "simulation_20230922_15-53-20"
-    #generated_users, generated_items, estimated_users, estimated_items = Simulation(path, generate_data=False)
-    RatingPlots(path)
+    path += "simulation_20230926_15-53-20"
+    generated_users, generated_items, estimated_users, estimated_items = Simulation(path, generate_data=False, readOnly=False)
+    AddMyPred(path, file="preds.csv")
+    RatingStats(path, file="preds.csv")
+
+    #RatingPlots(path, maxPlots=10)
