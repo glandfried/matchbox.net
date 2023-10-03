@@ -437,6 +437,7 @@ def AddMyPred(path, generated_users=None, generated_items=None, estimated_users=
         b_post = ratingBias(user_post[userBiasMask_e][0], item_post[itemBiasMask_e][0])
         gauss_pred = ratingEstimate(b_post, item_post[itemTraitMask_e], user_post[userTraitMask_e])
         thr = estimated_users.iloc[user][userThresholdMask_e][1:-1]
+        """x
         expected_preds = {}
         for i in range(len(thr)+1):
             if i==0:
@@ -447,13 +448,15 @@ def AddMyPred(path, generated_users=None, generated_items=None, estimated_users=
                 thi = 1-GaussSub(gauss_pred, thr[i-1]).GetProbBetween(-np.inf, 0)
             else:
                 #thi = GaussProd(gauss_pred, thr[i-1]).GetProbBetween(0, np.inf) - GaussProd(gauss_pred, thr[i]).GetProbBetween(0, np.inf)
-                thi = GaussSub(gauss_pred, thr[i]).GetProbBetween(-np.inf, 0) - (1 - GaussSub(gauss_pred, thr[i-1]).GetProbBetween(-np.inf, 0))
+                #thi = GaussSub(gauss_pred, thr[i]).GetProbBetween(-np.inf, 0) - (1 - GaussSub(gauss_pred, thr[i-1]).GetProbBetween(-np.inf, 0))
+                thi = 1 - (GaussSub(gauss_pred, thr[i-1]).GetProbBetween(-np.inf, 0) + (1 - GaussSub(gauss_pred, thr[i]).GetProbBetween(-np.inf, 0)))
             
             expected_preds[f"Y_proba_{i}_exp"] = thi
         
         #{'Y_proba_0_exp': 0.8011995759238173, 'Y_proba_1_exp': 0.35253555455746755, 'Y_proba_2_exp': 0.44866402136634975}
         assert(np.sum(expected_preds.values) == 1)
-
+        """
+        
         df.loc[i, "expected_pred"] = int(np.sum([gauss_pred>t for t in thr])) #Gaussian comparison is implemented, and is how they do it in recommender tutorial
         df.loc[i, "pred_gauss"] = GaussianToString(gauss_pred)
 
