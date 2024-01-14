@@ -356,8 +356,8 @@ def Simulation(path, generate_data=True):
 
 if __name__ == "__main__":
     path = f"./data/Simulation/"
-    #path += datetime.today().strftime('%Y%m%d_%H-%M-%S')
-    path += "mbox_train_20230915"
-    #generated_users, generated_items, estimated_users, estimated_items = Simulation(path, generate_data=True)
-    SimulationPlots(path)
-    #SimulationPlots(path, generated_users, generated_items, estimated_users, estimated_items)
+    path += datetime.today().strftime('%Y%m%d_%H-%M-%S')
+    #path += "mbox_train_20230915"
+    generated_users, generated_items, estimated_users, estimated_items = Simulation(path, generate_data=True)
+    #SimulationPlots(path)
+    SimulationPlots(path, generated_users, generated_items, estimated_users, estimated_items)
