@@ -6,10 +6,10 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
-#dataset = "./data/MovieLens/ml-20m/ratings.csv"
-dataset = "./data/Simulation/simulation_20230922_15-53-20/ratings.csv"
+dataset = "./data/MovieLens/ml-20m/ratings.csv"
+#dataset = "./data/Simulation/simulation_20230922_15-53-20/ratings.csv"
 ttsi = TrainTestSplitInstance(dataset)
-ttsi.loadDatasets(preprocessed=False, NROWS=None, BATCH_SIZE=None)
+ttsi.loadDatasets(preprocessed=False, NROWS=10_000, BATCH_SIZE=None)
 #ttsi.trainBatches = 8
 #ttsi.testBatches = 3
 #del ttsi.X_test
@@ -34,11 +34,12 @@ print("RandomForest", df_rf)
 lgbm=LGBM(ttsi, max_trials=100)
 df_lgbm=lgbm.bestCandidates()c
 print("LGBM", df_lgbm)
+"""
 
 mbox=Matchbox(ttsi, max_trials=100)
 df_mbox=mbox.bestCandidates()
-"""
 
+"""
 mbox=Matchbox(ttsi, max_trials=1)
 params = mbox.bestParams()
 params["iterationCount"] = 1
@@ -69,4 +70,4 @@ print("Terminado!")
 #OLD#print(RatingPredictors.infer_matchboxnet(dataset, useritem, 900000000).posterior)
 #print("Matchbox (infer.NET)", RatingPredictors.infer_matchboxnet(ttsi))
 #print(RatingPredictors.infer_SVDpp(dataset, useritem, 900000000).est)
-
+"""
