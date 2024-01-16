@@ -13,33 +13,37 @@ from datetime import datetime
 import warnings
 from InfernetWrapper import Gaussian
 
-numItems = 100
-numUsers = 100
-numFeatures = 5
-numObs = 10_000
-budget = numFeatures
+numItems = 400
+numUsers = 400
+numThresholds = 5
+numTraits = 5
+numObs = numItems*numUsers/2
+budget = numTraits
 
 def get_immediate_subdirectories(a_dir):
     return [name for name in os.listdir(a_dir)
             if os.path.isdir(os.path.join(a_dir, name))]
 
-def generateItems(numItems, budget, a=0.5, b=0.5):
+def generateItems(numItems, numTraits, a=0.5, b=0.5):
     res = []
     for i in range(numItems):
-        ls = beta.rvs(a, b, size=5)
+        ls = beta.rvs(a, b, size=numTraits)
         total_percentages = ((ls/np.sum(ls)))
-        traits = total_percentages * budget #Por que vinculé el budget a la cantidad de traits?
-        traits *= np.array([-1 if x==1 else 1 for x in binom.rvs(n=1, p=0.5, size=5)])
+        traits = total_percentages * numTraits #Why do this?
+        traits *= np.array([-1 if x==1 else 1 for x in binom.rvs(n=1, p=0.5, size=numTraits)])
         res.append(traits)
     return res
 
 def generateThresholds(num):
+    #assert numThresholds==5, "Only 5 user thresholds supported currently, check comments to implement other quantities"
     res = []
     for _ in range(num):
-        baseThresholds = [-2.55, -1.16, 0.0, 1.19, 2.69] #Gaussian.FromMeanAndVariance(l - numLevels / 2.0 + 0.5, 1.0)
-        noise = [x + norm.rvs(0,0.44) for x in baseThresholds]
+        #baseThresholds = [-2.55, -1.16, 0.0, 1.19, 2.69] 
+        baseThresholds = [Gaussian.FromMeanAndVariance(l - numThresholds / 2.0 + 0.5, 1.0).GetMean() for l in range(numThresholds)]
+        noise = [x + norm.rvs(0,0.044) for x in baseThresholds]
         thresholds = [-np.inf] + noise + [np.inf]
-        thresholds[3] = 0.0 #Matchbox seems to fix side and middle thresholds in -inf, 0, +inf
+        if numThresholds>2 and numThresholds%2 != 0:
+            thresholds[int(numThresholds/2)] = 0.0 #Matchbox seems to fix side and middle thresholds in -inf, 0, +inf
         assert([thresholds[i] > thresholds[i-1]+0.1 for i in range(1, len(thresholds)-1)])
         res.append(thresholds)
     return res
@@ -125,10 +129,10 @@ def dummyRatingsTestSplitFile(folder):
       file.write(f"2,2,2,999\n")
 
 def GenerateData():
-    affinityNoiseVariance = 0.44
-    thresholdNoiseVariance = 0.44
-    itemTraits = generateItems(numItems, numFeatures)
-    userTraits = generateItems(numUsers, numFeatures)
+    affinityNoiseVariance = 0.044
+    thresholdNoiseVariance = 0.044
+    itemTraits = generateItems(numItems, numTraits)
+    userTraits = generateItems(numUsers, numTraits)
     itemBias = norm.rvs(0,1,size=numItems)
     userBias = norm.rvs(0,1,size=numUsers)
     UserThresholds = generateThresholds(numUsers)
@@ -183,44 +187,6 @@ def GenerateData():
     dummyRatingsTestSplitFile(path)
 
     return df, generated_users, generated_items
-
-def RomperSimetriaEsImportante():
-    testDir = "./data/Tests"
-    tests = [int(x.replace("test", "")) for x in get_immediate_subdirectories(testDir)]
-    tests.sort()
-    print("Para ver el efecto abrir los graficos de user traits e items traits y mirarlos despues de correr con los datos del test 8 (rompe simetria usando items que despues otros usuarios púntuan), y despues de correr con los datos del test 10 (rompe simetria usando items que despues nadie mas puntua).")
-    for i in [8,10]:
-        print(F"========== TEST {i} ==========")
-        dataset = f"{testDir}/test{i}/ratings.csv"
-        ttsi = TrainTestSplitInstance(dataset)
-        ttsi.loadDatasets(preprocessed=True, NROWS=None, BATCH_SIZE=None)
-        mbox=Matchbox(ttsi, max_trials=1)
-        params = mbox.bestParams()
-        params["traitCount"] = 5
-        recommender = mbox.createRecommender(params)
-        _ = mbox.train(recommender)
-
-        userPosteriors = recommender.GetPosteriorDistributions().Users
-        itemPosteriors = recommender.GetPosteriorDistributions().Items
-        
-        for user in userPosteriors.Keys:
-            posteriors = userPosteriors.get_Item(user)
-            #os.makedirs(f"./tmp/user{user}", exist_ok=True)
-            plotThresholds(posteriors.Thresholds, user)
-            plotItemTraits(posteriors.Traits, user, isUser=True)
-            #print([(float("{:.2f}".format(g.GetMean())), float("{:.2f}".format(g.GetVariance()))) for g in posteriors.Thresholds])  
-
-        for item in itemPosteriors.Keys:
-            posteriors = itemPosteriors.get_Item(item)
-            #os.makedirs(f"./tmp/item{item}", exist_ok=True)
-            #plotThresholds(posteriors.Thresholds, item)
-            print(f"ITEM {item}")
-            print([(float("{:.2f}".format(g.GetMean())), float("{:.2f}".format(g.GetVariance()))) for g in posteriors.Traits])
-            plotItemTraits(posteriors.Traits, item)
-
-        input("Press Enter to continue...") 
-
-    print("Terminado!")
 
 def formatNumToString(var):
     if np.isinf(var):
@@ -312,7 +278,7 @@ def GetPosteriors(recommender, path):
     estimated_users = pd.DataFrame.from_dict({"user": [int(x) for x in userPosteriors.Keys]}).sort_values("user").reset_index(drop=True)
     estimated_items = pd.DataFrame.from_dict({"item": [int(x) for x in itemPosteriors.Keys]}).sort_values("item").reset_index(drop=True)
 
-    print("Generating user data...")
+    print("Getting user posteriors...")
     for user in tqdm(userPosteriors.Keys, total=len(userPosteriors.Keys)):
         posteriors = userPosteriors.get_Item(user)
         #os.makedirs(path+"/users", exist_ok=True)
@@ -320,7 +286,7 @@ def GetPosteriors(recommender, path):
         #plotItemTraits(posteriors.Traits, user, isUser=True, path=path+"/users", truth=generated_users.iloc[int(user)][userTraitMask])
         estimated_users = addEstimatedValues(estimated_users, int(user), thr=posteriors.Thresholds, tra=posteriors.Traits, bias=posteriors.Bias)
 
-    print("Generating item data...")
+    print("Getting item posteriors...")
     for item in tqdm(itemPosteriors.Keys, total=len(itemPosteriors.Keys)):
         posteriors = itemPosteriors.get_Item(item)
         #os.makedirs(path+"/items", exist_ok=True)
@@ -344,9 +310,19 @@ def Simulation(path, generate_data=True):
     ttsi.loadDatasets(preprocessed=True, NROWS=None, BATCH_SIZE=None)
     mbox=Matchbox(ttsi, max_trials=1)
     params = mbox.bestParams()
-    params["traitCount"] = numFeatures
+    params["numLevels"] = numThresholds
+    params["traitCount"] = numTraits
     recommender = mbox.createRecommender(params)
-    _ = mbox.train(recommender)
+
+    print("Training...")
+    stats = mbox.objective(params, recommender=recommender)
+    df = pd.DataFrame.from_dict(mbox._formatOutput([{"result":stats}]))
+    stats = mbox._addOtherStats(df)
+    stats.pop("loss") #Only train dataset, no test data
+    stats.pop("rmse") #Only train dataset, no test data
+    stats.pop("geo_mean") #Only train dataset, no test data
+    print(stats)
+    stats.to_csv(f"{path}/results.csv", header=True, index=True)
 
     estimated_users, estimated_items = GetPosteriors(recommender, path)
 

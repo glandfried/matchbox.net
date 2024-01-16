@@ -137,15 +137,23 @@ class Recommender():
             df["geo_mean_tr"] = np.exp(-df["tr_loss"])
         df["dataset_size"] = self.ttsi.size
         return df
-
+    
     def bestCandidates(self):
         """Perform trials over parameter space and return best candidates."""
         trials = Trials()
         best = fmin(lambda x: self.objective(x), self.space, algo=tpe.suggest, max_evals=self.max_trials, trials=trials)
-        best = self._addOtherStats(self._formatOutput(trials))
+        best = self._addOtherStats(self._formatOutput(trials.trials))
         best.to_csv(f"./trials/{self.resultsName()}.csv", header=True, index=False)
         return best
     
+    def singleRunWithStats(self):
+        """Perform single trial with best parameters and return stats."""
+        trials = Trials()
+        best = fmin(lambda x: self.objective(x), self.space, algo=tpe.suggest, max_evals=self.max_trials, trials=trials)
+        best = self._addOtherStats(self._formatOutput(trials.trials))
+        best.to_csv(f"./trials/{self.resultsName()}.csv", header=True, index=False)
+        return best
+
     def _formatOutput(self, trials):
         def flatten(doc, pref=''):
             res = {}
@@ -156,7 +164,7 @@ class Recommender():
                 else:
                     res[k] = v
             return res
-        df = pd.DataFrame(list(map(flatten, [e['result'] for e in trials.trials])))
+        df = pd.DataFrame(list(map(flatten, [e['result'] for e in trials])))
         return df.sort_values('loss')
     
     def champion(self, df:pd.DataFrame) -> pd.DataFrame:

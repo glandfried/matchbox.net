@@ -30,8 +30,10 @@ class Matchbox(Recommender):
             "UserTraitFeatureWeightPriorVariance": 1,
             "UserTraitVariance": 1,
             "iterationCount": 10,
-            "traitCount": 5
+            "traitCount": 5,
+            "numLevels": 5
             }
+
     def _formatPredDict(self, d):
         """
         Takes input of shape {usedId: {movieId: est_rating}} and converts it to array of estimated ratings.
@@ -165,7 +167,7 @@ class Matchbox(Recommender):
         return y_pred, y_pred_proba, y_train_pred_proba
 
     def createRecommender(self, params):
-        if "numLevels" in params: 
+        if "numLevels" in params and int(params["numLevels"])!=5: 
             dataMapping = DataframeMapping(0, int(params["numLevels"])) if self.fromDataframe is None else CsvMapping(0, int(params["numLevels"]), ",")
         else:
             params["numLevels"] = 5
@@ -233,8 +235,8 @@ class Matchbox(Recommender):
         #return np.prod([y_pred_proba[i][y_true_idx[i]] for i in range(len(y_pred_proba))])
         return [y_pred_proba[i][y_true_idx[i]] for i in range(len(y_pred_proba))]
 
-    def objective(self, params: dict, return_pred: bool=False) -> dict:
-        recommender = self.createRecommender(params)
+    def objective(self, params: dict, return_pred: bool=False, recommender=None) -> dict:
+        recommender = self.createRecommender(params) if recommender is None else recommender
         train_time = self.train(recommender)
         print("Finished training")
 
