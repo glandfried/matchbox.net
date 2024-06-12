@@ -236,7 +236,7 @@ class Matchbox(Recommender):
         return dfTest, dfStats
     
     def labels(self, numLevels):
-        return list(range(numLevels+1))
+        return list(range(1,numLevels+1))
     
     def correct_probas(self, y_true, y_pred_proba, labels):
         y_true_idx = [labels.index(i) for i in y_true]
