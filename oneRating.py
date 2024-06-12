@@ -63,9 +63,12 @@ params = mbox.bestParams()
 params["traitCount"] = 2
 params["numLevels"] = 1
 recommender = mbox.createRecommender(params)
-recommender.Settings.Training.ItemBiasVariance = 1
-recommender.Settings.Training.UserBiasVariance = 1
+recommender.Settings.Training.Advanced.ItemBiasVariance = 1
+recommender.Settings.Training.Advanced.UserBiasVariance = 1
+recommender.Settings.Training.Advanced.AffinityNoiseVariance = 1
+recommender.Settings.Training.Advanced.UserThresholdNoiseVariance = 0
 recommender.Train(f"./data/Tests/oneRating/ratings_train.csv")
+assert(recommender.Settings.Training.Advanced.UserThresholdNoiseVariance == 0), "UserThresholdNoiseVariance not set"
 userPosteriors = recommender.GetPosteriorDistributions().Users
 itemPosteriors = recommender.GetPosteriorDistributions().Items
 
@@ -81,7 +84,9 @@ for item in itemPosteriors.Keys:
     estimated_items = addEstimatedValues(estimated_items, int(item), tra=posteriors.Traits, bias=posteriors.Bias)
     
 print(estimated_users.to_string())
+estimated_users.to_csv(f"./data/Tests/oneRating/userEstimations.csv", header=True, index=True)
 print(estimated_items.to_string())
+estimated_items.to_csv(f"./data/Tests/oneRating/itemEstimations.csv", header=True, index=True)
 #posterior = recommender.PredictDistribution(f"./data/Tests/test4/ratings_test.csv")#f"./data/Tests/oneRating/ratings.csv")
 #print(posterior)
 

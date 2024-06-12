@@ -15,20 +15,22 @@ class Matchbox(Recommender):
         return "Matchbox"
     def defaultSpace(self) -> dict:
         return {
-            "traitCount" :  hp.quniform('traitCount', 10, 30, 1),
+            "traitCount" :  hp.quniform('traitCount', 4, 10, 1),
             "iterationCount" : hp.quniform('iterationCount', 5, 30, 5),
-            "UserTraitFeatureWeightPriorVariance" : hp.choice('UserTraitFeatureWeightPriorVariance', [0.75,1,1.25,1.5,1.75,2]),
-            "ItemTraitFeatureWeightPriorVariance" : hp.choice('ItemTraitFeatureWeightPriorVariance', [0,0.25,0.5,0.75,1]),
-            "ItemTraitVariance" : hp.choice("ItemTraitVariance", [0,0.25,0.5,0.75,1]),
-            "UserTraitVariance" : hp.choice("UserTraitVariance", [0,0.25,0.5,0.75,1])
+            "UserTraitFeatureWeightPriorVariance" : hp.choice('UserTraitFeatureWeightPriorVariance', [0.25,0.5,0.75,1]),
+            "ItemTraitFeatureWeightPriorVariance" : hp.choice('ItemTraitFeatureWeightPriorVariance', [0.25,0.5,0.75,1]),
+            "ItemTraitVariance" : hp.choice("ItemTraitVariance", [0.25,0.5,0.75,1]),
+            "UserTraitVariance" : hp.choice("UserTraitVariance", [0.25,0.5,0.75,1]),
+            "AffinityNoiseVariance" : hp.choice("AffinityNoiseVariance", [1.0])
         }
     
     def bestParams(self) -> dict:
         return {
             "ItemTraitFeatureWeightPriorVariance": 1,
-            "ItemTraitVariance": 2,
+            "ItemTraitVariance": 1,
             "UserTraitFeatureWeightPriorVariance": 1,
             "UserTraitVariance": 1,
+            "AffinityNoiseVariance": 1,
             "iterationCount": 10,
             "traitCount": 5,
             "numLevels": 5
@@ -168,14 +170,20 @@ class Matchbox(Recommender):
 
     def createRecommender(self, params):
         if "numLevels" in params and int(params["numLevels"])!=5: 
-            dataMapping = DataframeMapping(0, int(params["numLevels"])) if self.fromDataframe is None else CsvMapping(0, int(params["numLevels"]), ",")
+            dataMapping = DataframeMapping(1, int(params["numLevels"])) if self.fromDataframe is None else CsvMapping(1, int(params["numLevels"]), ",")
         else:
+            # CSV mapping by default starts ratings at 0 so we need to set it to start at 1
             params["numLevels"] = 5
-            dataMapping = DataframeMapping() if self.fromDataframe is None else CsvMapping()
+            dataMapping = DataframeMapping(1,5) if self.fromDataframe is None else CsvMapping(1,5,",")
         recommender = MatchboxCsvWrapper.Create(dataMapping)
         # Settings: https://dotnet.github.io/infer/userguide/Learners/Matchbox/API/Setting%20up%20a%20recommender.html
         recommender.Settings.Training.TraitCount = int(params["traitCount"])
-        recommender.Settings.Training.IterationCount = int(params["iterationCount"])
+        recommender.Settings.Training.IterationCount = int(params["iterationCount"])        
+        recommender.Settings.Training.Advanced.UserTraitFeatureWeightPriorVariance = float(params["UserTraitFeatureWeightPriorVariance"])
+        recommender.Settings.Training.Advanced.ItemTraitFeatureWeightPriorVariance = float(params["ItemTraitFeatureWeightPriorVariance"])
+        recommender.Settings.Training.Advanced.ItemTraitVariance = float(params["ItemTraitVariance"])
+        recommender.Settings.Training.Advanced.UserTraitVariance = float(params["UserTraitVariance"])
+        recommender.Settings.Training.Advanced.AffinityNoiseVariance = float(params["AffinityNoiseVariance"])
         #recommender.Settings.Training.BatchCount = 2000
         if "lossFunction" in params:
             recommender.Settings.Prediction.SetPredictionLossFunction(params["lossFunction"])
@@ -236,6 +244,7 @@ class Matchbox(Recommender):
         return [y_pred_proba[i][y_true_idx[i]] for i in range(len(y_pred_proba))]
 
     def objective(self, params: dict, return_pred: bool=False, recommender=None) -> dict:
+        print(params)
         recommender = self.createRecommender(params) if recommender is None else recommender
         train_time = self.train(recommender)
         print("Finished training")

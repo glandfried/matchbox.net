@@ -80,6 +80,7 @@ class TrainTestSplitInstance():
         X = df.iloc[:,[0,1,3]]
         y = df.iloc[:,2]
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=0)
+        self.indexes_to_csv(X_train.index, X_test.index)
         self.X_train = X_train.reset_index(drop=True)
         self.X_test = X_test.reset_index(drop=True)
         self.y_train = y_train.reset_index(drop=True)
@@ -100,14 +101,20 @@ class TrainTestSplitInstance():
         return self.X_train, self.X_test, self.y_train, self.y_test
 
     def trainCsvPath(self, idx=None):
-        if idx is not None:
+        if idx is not None: # Training is in batches
             return self.path.replace("ratings.csv",f"batches/ratings_train_{idx}.csv")
         return f"{self.path[:-4]}_train.csv"
     
     def testCsvPath(self, idx=None):
-        if idx is not None:
+        if idx is not None: # Training is in batches
             return self.path.replace("ratings.csv",f"batches/ratings_test_{idx}.csv")
         return f"{self.path[:-4]}_test.csv"
+
+    def indexes_to_csv(self, train_idxs, test_idxs):
+        with open(f"{self.trainCsvPath()[:-4]}.idx","w") as f:
+            f.write(",".join(np.char.mod('%d',train_idxs)))
+        with open(f"{self.testCsvPath()[:-4]}.idx","w") as f:
+            f.write(",".join(np.char.mod('%d',test_idxs)))
 
     def to_csv(self):
         dfTrain = pd.concat([self.X_train, self.y_train], axis=1, sort=False)
