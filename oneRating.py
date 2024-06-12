@@ -61,7 +61,8 @@ ttsi.loadDatasets(preprocessed=True, NROWS=None, BATCH_SIZE=None)
 mbox=Matchbox(ttsi, max_trials=1)
 params = mbox.bestParams()
 params["traitCount"] = 2
-params["numLevels"] = 1
+params["minRating"] = 0
+params["maxRating"] = 1
 recommender = mbox.createRecommender(params)
 recommender.Settings.Training.Advanced.ItemBiasVariance = 1
 recommender.Settings.Training.Advanced.UserBiasVariance = 1

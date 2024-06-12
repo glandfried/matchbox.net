@@ -577,7 +577,8 @@ def Simulation(path, generate_data=True, readOnly=False):
     params = mbox.bestParams()
     params["iterationCount"] = 1
     params["traitCount"] = numFeatures
-    params["numLevels"] = numLevels
+    params["minRating"] = 0
+    params["maxRating"] = numLevels
     recommender = mbox.createRecommender(params)
     _ = mbox.train(recommender)
 

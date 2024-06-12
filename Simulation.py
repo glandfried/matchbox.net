@@ -13,11 +13,13 @@ from datetime import datetime
 import warnings
 from InfernetWrapper import Gaussian
 
-numItems = 400
-numUsers = 400
-numThresholds = 5
-numTraits = 5
-numObs = numItems*numUsers/2
+largeData = True
+
+numItems = 400 if largeData else 10 
+numUsers = 400 if largeData else 50
+numThresholds = 2
+numTraits = 2
+numObs = int(numUsers * numItems / 2)
 budget = numTraits
 
 def get_immediate_subdirectories(a_dir):
@@ -27,10 +29,13 @@ def get_immediate_subdirectories(a_dir):
 def generateItems(numItems, numTraits, a=0.5, b=0.5):
     res = []
     for i in range(numItems):
+        """
         ls = beta.rvs(a, b, size=numTraits)
         total_percentages = ((ls/np.sum(ls)))
         traits = total_percentages * numTraits #Why do this?
         traits *= np.array([-1 if x==1 else 1 for x in binom.rvs(n=1, p=0.5, size=numTraits)])
+        """
+        traits = norm.rvs(loc=0, scale=1, size=numTraits)
         res.append(traits)
     return res
 
@@ -132,6 +137,10 @@ def GenerateData():
     affinityNoiseVariance = 0.044
     thresholdNoiseVariance = 0.044
     itemTraits = generateItems(numItems, numTraits)
+    #for i in range(numTraits): # Break symmetry
+    #    itemTraits[i][0:i] = 0
+    #    itemTraits[i][i] = 1
+    #    itemTraits[i][i+1:] = 0
     userTraits = generateItems(numUsers, numTraits)
     itemBias = norm.rvs(0,1,size=numItems)
     userBias = norm.rvs(0,1,size=numUsers)
@@ -310,7 +319,8 @@ def Simulation(path, generate_data=True):
     ttsi.loadDatasets(preprocessed=True, NROWS=None, BATCH_SIZE=None)
     mbox=Matchbox(ttsi, max_trials=1)
     params = mbox.bestParams()
-    params["numLevels"] = numThresholds
+    params["minRating"] = 0
+    params["maxRating"] = numThresholds
     params["traitCount"] = numTraits
     recommender = mbox.createRecommender(params)
 

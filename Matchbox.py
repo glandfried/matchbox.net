@@ -10,9 +10,28 @@ from InfernetWrapper import Gaussian
 class Matchbox(Recommender):
     def __init__(self, ttsi: TrainTestSplitInstance, max_trials: int=100, space: dict=None, fromDataframe=False):
         self.fromDataframe = fromDataframe
+        self.minRating = 1
+        self.maxRating = 5
+        self.trained = False
         super().__init__(ttsi, max_trials, space)
     def name(self) -> str:
         return "Matchbox"
+    @property
+    def minRating(self):
+        return self._minRating
+    @property
+    def maxRating(self):
+        return self._minRating
+    @minRating.setter
+    def minRating(self, value):
+        if self.trained:
+            raise Exception("Can't change min rating once recommender is trained")
+        self._minRating = value
+    @maxRating.setter
+    def maxRating(self, value):
+        if self.trained:
+            raise Exception("Can't change max rating once recommender is trained")
+        self._maxRating = value
     def defaultSpace(self) -> dict:
         return {
             "traitCount" :  hp.quniform('traitCount', 4, 10, 1),
@@ -32,8 +51,7 @@ class Matchbox(Recommender):
             "UserTraitVariance": 1,
             "AffinityNoiseVariance": 1,
             "iterationCount": 10,
-            "traitCount": 5,
-            "numLevels": 5
+            "traitCount": 5
             }
 
     def _formatPredDict(self, d):
@@ -140,6 +158,7 @@ class Matchbox(Recommender):
                 for i in range(self.ttsi.trainBatches):
                     recommender.Train(self.ttsi.trainCsvPath(idx=i)); #TODO: this is not working?
         train_time = time() - t0
+        self.trained = True
         return train_time
     
     def predict(self, recommender):
@@ -169,12 +188,9 @@ class Matchbox(Recommender):
         return y_pred, y_pred_proba, y_train_pred_proba
 
     def createRecommender(self, params):
-        if "numLevels" in params and int(params["numLevels"])!=5: 
-            dataMapping = DataframeMapping(1, int(params["numLevels"])) if self.fromDataframe is None else CsvMapping(1, int(params["numLevels"]), ",")
-        else:
-            # CSV mapping by default starts ratings at 0 so we need to set it to start at 1
-            params["numLevels"] = 5
-            dataMapping = DataframeMapping(1,5) if self.fromDataframe is None else CsvMapping(1,5,",")
+        params["minRating"] = self.minRating
+        params["maxRating"] = self.maxRating
+        dataMapping = DataframeMapping(self.minRating, self.maxRating) if self.fromDataframe is None else CsvMapping(self.minRating, self.maxRating, ",")
         recommender = MatchboxCsvWrapper.Create(dataMapping)
         # Settings: https://dotnet.github.io/infer/userguide/Learners/Matchbox/API/Setting%20up%20a%20recommender.html
         recommender.Settings.Training.TraitCount = int(params["traitCount"])
@@ -191,8 +207,8 @@ class Matchbox(Recommender):
 
     def predictionStats(self, params, train_time, y_pred, y_pred_proba, y_train_pred_proba, y_train, y_test):
         rmse = sklearn.metrics.mean_squared_error(y_test, y_pred)
-        score = sklearn.metrics.log_loss(y_test, y_pred_proba, labels=self.labels(int(params["numLevels"])))
-        score_train = sklearn.metrics.log_loss(y_train, y_train_pred_proba, labels=self.labels(int(params["numLevels"])))
+        score = sklearn.metrics.log_loss(y_test, y_pred_proba, labels=self.labels())
+        score_train = sklearn.metrics.log_loss(y_train, y_train_pred_proba, labels=self.labels())
         
         #rmse = sklearn.metrics.mean_squared_error(y_test, y_pred)
         #score = sklearn.metrics.log_loss(y_test, y_pred_proba, labels=[1,2,3,4,5])
@@ -226,7 +242,7 @@ class Matchbox(Recommender):
         dfTest = dfTest.reindex(columns=[0,1,2,3])
         dfTest = dfTest.rename(columns={0:"userId",1:"movieId", 2:"y_test", 3:"timestamp"})
         dfTest["y_pred"] = y_pred
-        dfTest["y_pred_proba"]=pd.Series(self.correct_probas(y_test, y_pred_proba, self.labels(int(params["numLevels"] if "numLevels" in params else 5))))
+        dfTest["y_pred_proba"]=pd.Series(self.correct_probas(y_test, y_pred_proba, self.labels()))
         for i in range(len(y_pred_proba[0])):
             dfTest[f"y_proba_{i+1}"] = [a[i] for a in y_pred_proba]
 
@@ -235,8 +251,8 @@ class Matchbox(Recommender):
         
         return dfTest, dfStats
     
-    def labels(self, numLevels):
-        return list(range(1,numLevels+1))
+    def labels(self):
+        return list(range(self.minRating,self.maxRating+1))
     
     def correct_probas(self, y_true, y_pred_proba, labels):
         y_true_idx = [labels.index(i) for i in y_true]
@@ -254,8 +270,8 @@ class Matchbox(Recommender):
 
         return self.predictionStats(params, train_time, y_pred, y_pred_proba, y_train_pred_proba, y_train, y_test)
         rmse = sklearn.metrics.mean_squared_error(y_test, y_pred)
-        score = sklearn.metrics.log_loss(y_test, y_pred_proba, labels=self.labels(int(params["numLevels"])))
-        score_train = sklearn.metrics.log_loss(y_train, y_train_pred_proba, labels=self.labels(int(params["numLevels"])))
+        score = sklearn.metrics.log_loss(y_test, y_pred_proba, labels=self.labels())
+        score_train = sklearn.metrics.log_loss(y_train, y_train_pred_proba, labels=self.labels())
         
         #rmse = sklearn.metrics.mean_squared_error(y_test, y_pred)
         #score = sklearn.metrics.log_loss(y_test, y_pred_proba, labels=[1,2,3,4,5])
