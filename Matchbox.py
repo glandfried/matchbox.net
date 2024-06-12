@@ -8,11 +8,11 @@ import sklearn.metrics
 from InfernetWrapper import Gaussian
 
 class Matchbox(Recommender):
+    trained:bool = False
     def __init__(self, ttsi: TrainTestSplitInstance, max_trials: int=100, space: dict=None, fromDataframe=False):
         self.fromDataframe = fromDataframe
         self.minRating = 1
         self.maxRating = 5
-        self.trained = False
         super().__init__(ttsi, max_trials, space)
     def name(self) -> str:
         return "Matchbox"
@@ -21,7 +21,7 @@ class Matchbox(Recommender):
         return self._minRating
     @property
     def maxRating(self):
-        return self._minRating
+        return self._maxRating
     @minRating.setter
     def minRating(self, value):
         if self.trained:

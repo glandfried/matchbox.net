@@ -6,11 +6,11 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
+
 dataset = "./data/MovieLens/ml-100k/ratings.csv"
 #dataset = "./data/Simulation/20240114_02-11-20_inferUpdate/ratings.csv"
 ttsi = TrainTestSplitInstance(dataset)
 ttsi.loadDatasets(preprocessed=True, NROWS=None, BATCH_SIZE=None)
-
 print("Run experiments for 1 to 5 star 100k movielens....")
 mbox=Matchbox(ttsi, max_trials=10)
 mbox.minRating = 1

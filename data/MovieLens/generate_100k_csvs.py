@@ -23,7 +23,7 @@ def write_header(fs):
     for f in fs:
         f.write("userId,movieId,rating,timestamp")
 
-def write_to_train_or_test(idx, ftrain, ftest, nextTrain, nextTest):
+def write_to_train_or_test(l, idx, ftrain, ftest, nextTrain, nextTest):
     if idx == nextTrain:
         ftrain.write(",".join(l))
         return (1,0)
@@ -57,13 +57,14 @@ with open("ml-100k/u.data", "r") as f:
                 lint = [int(x) for x in line.split("\t")]
                 lint[2] = 1 if lint[2] >= 4 else 0
                 lint = [str(x) for x in lint]
+                lint[-1] += "\n"
                 fw_bin.write(",".join(lint))
                 
-                addTrain, addTest = write_to_train_or_test(iline, fw_train, fw_test, train_idxs[itrain], test_idxs[itest])
+                addTrain, addTest = write_to_train_or_test(l, iline, fw_train, fw_test, train_idxs[itrain], test_idxs[itest])
                 itrain += addTrain
                 itest += addTest
 
-                addTrain, addTest = write_to_train_or_test(iline, fw_train_bin, fw_test_bin, train_idxs_bin[itrain_bin], test_idxs_bin[itest_bin])
+                addTrain, addTest = write_to_train_or_test(lint, iline, fw_train_bin, fw_test_bin, train_idxs_bin[itrain_bin], test_idxs_bin[itest_bin])
                 itrain_bin += addTrain
                 itest_bin += addTest
                 
