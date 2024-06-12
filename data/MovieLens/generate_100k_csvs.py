@@ -34,7 +34,7 @@ def write_to_train_or_test(idx, ftrain, ftest, nextTrain, nextTest):
 
 train_idxs, test_idxs = load_idxs("ml-100k")
 train_idxs_bin, test_idxs_bin = load_idxs("ml-100k-binary")
-print(f"Processing {len(test_idxs)} test ratings and {len(train_idxs)} train ratings...")
+print(f"Processing {len(test_idxs)-1} test ratings and {len(train_idxs)-1} train ratings...")
 print("Generating 5 star and binary csvs...")
 with open("ml-100k/u.data", "r") as f:
     with (open("ml-100k/ratings.csv", "w") as fw,
