@@ -8,7 +8,6 @@ import sklearn.metrics
 from InfernetWrapper import Gaussian
 
 class Matchbox(Recommender):
-    trained:bool = False
     def __init__(self, ttsi: TrainTestSplitInstance, max_trials: int=100, space: dict=None, fromDataframe=False):
         self.fromDataframe = fromDataframe
         self.minRating = 1
@@ -24,13 +23,9 @@ class Matchbox(Recommender):
         return self._maxRating
     @minRating.setter
     def minRating(self, value):
-        if self.trained:
-            raise Exception("Can't change min rating once recommender is trained")
         self._minRating = value
     @maxRating.setter
     def maxRating(self, value):
-        if self.trained:
-            raise Exception("Can't change max rating once recommender is trained")
         self._maxRating = value
     def defaultSpace(self) -> dict:
         return {
@@ -158,7 +153,6 @@ class Matchbox(Recommender):
                 for i in range(self.ttsi.trainBatches):
                     recommender.Train(self.ttsi.trainCsvPath(idx=i)); #TODO: this is not working?
         train_time = time() - t0
-        self.trained = True
         return train_time
     
     def predict(self, recommender):
