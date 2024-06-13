@@ -32,13 +32,14 @@ def write_to_train_or_test(l, idx, ftrain, ftest, nextTrain, nextTest):
         return (0,1)
     return (0,0)
 
-def generateDatasets(basepath):
+def generateDatasets(basepath, orig_file, separator):
+    would_overwrite = orig_file == f"{basepath}100k/ratings.csv"
     train_idxs, test_idxs = load_idxs(f"{basepath}100k")
     train_idxs_bin, test_idxs_bin = load_idxs(f"{basepath}100k-binary")
     print(f"Processing {len(test_idxs)-1} test ratings and {len(train_idxs)-1} train ratings...")
     print("Generating 5 star and binary csvs...")
-    with open(f"{basepath}100k/u.data", "r") as f:
-        with (open(f"{basepath}100k/ratings.csv", "w") as fw,
+    with open(orig_file, "r") as f:
+        with (
             open(f"{basepath}100k-binary/ratings.csv", "w") as fw_bin,
             open(f"{basepath}100k/ratings_train.csv","w") as fw_train,
             open(f"{basepath}100k/ratings_test.csv","w") as fw_test,
@@ -50,12 +51,18 @@ def generateDatasets(basepath):
                 itrain = 0
                 itest_bin = 0
                 itrain_bin = 0
-                write_header([fw,fw_bin])
+                files_with_headers = [fw_bin]
+                if not would_overwrite:
+                    files_with_headers.append(fw)
+                write_header(files_with_headers)
                 for line in f.readlines():
-                    l = [x for x in line.split("\t")]
-                    fw.write(",".join(l))
-
-                    lint = [int(x) for x in line.split("\t")]
+                    l = [x for x in line.split(separator)]
+                    if l[0] == "userId":
+                        continue
+                    if not would_overwrite:
+                        with open(f"{basepath}100k/ratings.csv", "w") as fw:
+                            fw.write(",".join(l))
+                    lint = [int(x) for x in line.split(separator)]
                     lint[2] = 1 if lint[2] >= 4 else 0
                     lint = [str(x) for x in lint]
                     lint[-1] += "\n"
@@ -71,7 +78,7 @@ def generateDatasets(basepath):
                     
                     iline += 1
 
-print("Generating movielens csvs")
-generateDatasets("./Simulation/tutorial_synth/")
 print("Generating synthetic csvs")
-generateDatasets("./MovieLens/ml-")
+generateDatasets("./Simulation/tutorial_synth/","./Simulation/tutorial_synth/100k/ratings.csv",",")
+#print("Generating movielens csvs")
+#generateDatasets("./MovieLens/ml-","./MovieLens/ml-100k/u.data","\t")
