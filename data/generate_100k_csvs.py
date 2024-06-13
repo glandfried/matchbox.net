@@ -53,6 +53,7 @@ def generateDatasets(basepath, orig_file, separator):
                 itrain_bin = 0
                 files_with_headers = [fw_bin]
                 if not would_overwrite:
+                    fw = open(f"{basepath}100k/ratings.csv", "w")
                     files_with_headers.append(fw)
                 write_header(files_with_headers)
                 for line in f.readlines():
@@ -60,8 +61,7 @@ def generateDatasets(basepath, orig_file, separator):
                     if l[0] == "userId":
                         continue
                     if not would_overwrite:
-                        with open(f"{basepath}100k/ratings.csv", "w") as fw:
-                            fw.write(",".join(l))
+                        fw.write(",".join(l))
                     lint = [int(x) for x in line.split(separator)]
                     lint[2] = 1 if lint[2] >= 4 else 0
                     lint = [str(x) for x in lint]
@@ -77,8 +77,10 @@ def generateDatasets(basepath, orig_file, separator):
                     itest_bin += addTest
                     
                     iline += 1
+        if not would_overwrite:
+            fw.close()
 
 print("Generating synthetic csvs")
 generateDatasets("./Simulation/tutorial_synth/","./Simulation/tutorial_synth/100k/ratings.csv",",")
-#print("Generating movielens csvs")
-#generateDatasets("./MovieLens/ml-","./MovieLens/ml-100k/u.data","\t")
+print("Generating movielens csvs")
+generateDatasets("./MovieLens/ml-","./MovieLens/ml-100k/u.data","\t")
