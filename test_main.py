@@ -32,4 +32,4 @@ for i in tests:
     mbox=Matchbox(ttsi, max_trials=1)
     df_mbox=mbox.predictionResults()
     print(f"==== Test {i} ====")
-    print(df_mbox)
+    print(df_mbox.to_string())

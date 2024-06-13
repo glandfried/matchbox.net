@@ -1,0 +1,62 @@
+  0%|          | 0/10 [00:00<?, ?trial/s, best loss=?]                                                      {'AffinityNoiseVariance': 1.0, 'ItemTraitFeatureWeightPriorVariance': 0.25, 'ItemTraitVariance': 0.5, 'UserTraitFeatureWeightPriorVariance': 1, 'UserTraitVariance': 0.5, 'iterationCount': 25.0, 'traitCount': 7.0}
+  0%|          | 0/10 [00:00<?, ?trial/s, best loss=?]                                                      Finished training
+  0%|          | 0/10 [04:58<?, ?trial/s, best loss=?] 10%|█         | 1/10 [05:21<48:12, 321.35s/trial, best loss: 1.9879817200090044]                                                                                 {'AffinityNoiseVariance': 1.0, 'ItemTraitFeatureWeightPriorVariance': 1, 'ItemTraitVariance': 0.5, 'UserTraitFeatureWeightPriorVariance': 0.75, 'UserTraitVariance': 1, 'iterationCount': 25.0, 'traitCount': 9.0}
+ 10%|█         | 1/10 [05:21<48:12, 321.35s/trial, best loss: 1.9879817200090044]                                                                                 Finished training
+ 10%|█         | 1/10 [10:21<48:12, 321.35s/trial, best loss: 1.9879817200090044] 20%|██        | 2/10 [10:43<42:56, 322.04s/trial, best loss: 1.9879817200090044]                                                                                 {'AffinityNoiseVariance': 1.0, 'ItemTraitFeatureWeightPriorVariance': 0.25, 'ItemTraitVariance': 0.75, 'UserTraitFeatureWeightPriorVariance': 1, 'UserTraitVariance': 0.5, 'iterationCount': 10.0, 'traitCount': 7.0}
+ 20%|██        | 2/10 [10:43<42:56, 322.04s/trial, best loss: 1.9879817200090044]                                                                                 Finished training
+ 20%|██        | 2/10 [12:42<42:56, 322.04s/trial, best loss: 1.9879817200090044] 30%|███       | 3/10 [13:05<27:56, 239.45s/trial, best loss: 1.9786636159221935]                                                                                 {'AffinityNoiseVariance': 1.0, 'ItemTraitFeatureWeightPriorVariance': 0.25, 'ItemTraitVariance': 0.75, 'UserTraitFeatureWeightPriorVariance': 0.5, 'UserTraitVariance': 0.75, 'iterationCount': 10.0, 'traitCount': 10.0}
+ 30%|███       | 3/10 [13:05<27:56, 239.45s/trial, best loss: 1.9786636159221935]                                                                                 Finished training
+ 30%|███       | 3/10 [15:04<27:56, 239.45s/trial, best loss: 1.9786636159221935] 40%|████      | 4/10 [15:27<20:06, 201.06s/trial, best loss: 1.9786636159221935]                                                                                 {'AffinityNoiseVariance': 1.0, 'ItemTraitFeatureWeightPriorVariance': 0.25, 'ItemTraitVariance': 0.25, 'UserTraitFeatureWeightPriorVariance': 0.25, 'UserTraitVariance': 0.25, 'iterationCount': 25.0, 'traitCount': 4.0}
+ 40%|████      | 4/10 [15:27<20:06, 201.06s/trial, best loss: 1.9786636159221935]                                                                                 Finished training
+ 40%|████      | 4/10 [20:23<20:06, 201.06s/trial, best loss: 1.9786636159221935] 50%|█████     | 5/10 [20:45<20:17, 243.48s/trial, best loss: 1.9042215467052535]                                                                                 {'AffinityNoiseVariance': 1.0, 'ItemTraitFeatureWeightPriorVariance': 0.75, 'ItemTraitVariance': 0.25, 'UserTraitFeatureWeightPriorVariance': 0.25, 'UserTraitVariance': 0.25, 'iterationCount': 25.0, 'traitCount': 7.0}
+ 50%|█████     | 5/10 [20:45<20:17, 243.48s/trial, best loss: 1.9042215467052535]                                                                                 Finished training
+ 50%|█████     | 5/10 [25:47<20:17, 243.48s/trial, best loss: 1.9042215467052535] 60%|██████    | 6/10 [26:10<18:04, 271.09s/trial, best loss: 1.9042215467052535]                                                                                 {'AffinityNoiseVariance': 1.0, 'ItemTraitFeatureWeightPriorVariance': 0.25, 'ItemTraitVariance': 0.5, 'UserTraitFeatureWeightPriorVariance': 0.5, 'UserTraitVariance': 0.75, 'iterationCount': 25.0, 'traitCount': 4.0}
+ 60%|██████    | 6/10 [26:10<18:04, 271.09s/trial, best loss: 1.9042215467052535]                                                                                 Finished training
+ 60%|██████    | 6/10 [31:04<18:04, 271.09s/trial, best loss: 1.9042215467052535] 70%|███████   | 7/10 [31:27<14:17, 285.96s/trial, best loss: 1.9042215467052535]                                                                                 {'AffinityNoiseVariance': 1.0, 'ItemTraitFeatureWeightPriorVariance': 1, 'ItemTraitVariance': 0.5, 'UserTraitFeatureWeightPriorVariance': 0.25, 'UserTraitVariance': 1, 'iterationCount': 25.0, 'traitCount': 4.0}
+ 70%|███████   | 7/10 [31:27<14:17, 285.96s/trial, best loss: 1.9042215467052535]                                                                                 Finished training
+ 70%|███████   | 7/10 [36:24<14:17, 285.96s/trial, best loss: 1.9042215467052535] 80%|████████  | 8/10 [36:46<09:53, 296.58s/trial, best loss: 1.9042215467052535]                                                                                 {'AffinityNoiseVariance': 1.0, 'ItemTraitFeatureWeightPriorVariance': 0.25, 'ItemTraitVariance': 0.5, 'UserTraitFeatureWeightPriorVariance': 0.5, 'UserTraitVariance': 1, 'iterationCount': 15.0, 'traitCount': 10.0}
+ 80%|████████  | 8/10 [36:46<09:53, 296.58s/trial, best loss: 1.9042215467052535]                                                                                 Finished training
+ 80%|████████  | 8/10 [39:49<09:53, 296.58s/trial, best loss: 1.9042215467052535] 90%|█████████ | 9/10 [40:12<04:28, 268.34s/trial, best loss: 1.9042215467052535]                                                                                 {'AffinityNoiseVariance': 1.0, 'ItemTraitFeatureWeightPriorVariance': 0.25, 'ItemTraitVariance': 1, 'UserTraitFeatureWeightPriorVariance': 0.5, 'UserTraitVariance': 1, 'iterationCount': 20.0, 'traitCount': 5.0}
+ 90%|█████████ | 9/10 [40:12<04:28, 268.34s/trial, best loss: 1.9042215467052535]                                                                                 Finished training
+ 90%|█████████ | 9/10 [44:11<04:28, 268.34s/trial, best loss: 1.9042215467052535]100%|██████████| 10/10 [44:34<00:00, 266.19s/trial, best loss: 1.9042215467052535]100%|██████████| 10/10 [44:34<00:00, 267.41s/trial, best loss: 1.9042215467052535]
+Matchbox       rmse      loss   tr_loss  ...  geo_mean  geo_mean_tr  dataset_size
+4  2.27948  1.904222  1.913457  ...  0.148939     0.147569         99999
+5  2.26632  1.931813  1.945571  ...  0.144885     0.142906         99999
+6  2.29308  1.949665  1.959651  ...  0.142322     0.140908         99999
+7  2.29944  1.954793  1.964844  ...  0.141594     0.140178         99999
+2  2.28064  1.978664  1.996702  ...  0.138254     0.135782         99999
+9  2.30708  1.981503  1.992038  ...  0.137862     0.136417         99999
+0  2.28268  1.987982  2.002371  ...  0.136972     0.135015         99999
+3  2.28160  2.027755  2.051395  ...  0.131631     0.128555         99999
+1  2.27908  2.034578  2.055837  ...  0.130736     0.127986         99999
+8  2.27828  2.041812  2.064905  ...  0.129793     0.126830         99999
+
+[10 rows x 16 columns]
+  0%|          | 0/10 [00:00<?, ?trial/s, best loss=?] 10%|█         | 1/10 [00:53<07:57, 53.09s/trial, best loss: 1.3399481072400605] 20%|██        | 2/10 [01:31<05:55, 44.47s/trial, best loss: 1.3393782506119156] 30%|███       | 3/10 [02:35<06:14, 53.56s/trial, best loss: 1.3389993487364822] 40%|████      | 4/10 [03:33<05:31, 55.33s/trial, best loss: 1.3389993487364822] 50%|█████     | 5/10 [04:19<04:19, 51.97s/trial, best loss: 1.3389993487364822] 60%|██████    | 6/10 [05:12<03:28, 52.02s/trial, best loss: 1.3389993487364822] 70%|███████   | 7/10 [05:29<02:02, 40.86s/trial, best loss: 1.3389993487364822] 80%|████████  | 8/10 [06:07<01:19, 39.85s/trial, best loss: 1.3389993487364822] 90%|█████████ | 9/10 [07:08<00:46, 46.52s/trial, best loss: 1.3389993487364822]100%|██████████| 10/10 [08:13<00:00, 51.97s/trial, best loss: 1.3389993487364822]100%|██████████| 10/10 [08:13<00:00, 49.30s/trial, best loss: 1.3389993487364822]
+RandomForest       rmse      loss       tr_loss  ...  geo_mean  geo_mean_tr dataset_size
+2  1.32628  1.338999  8.205379e-01  ...  0.262108     0.440195        99999
+1  1.32104  1.339378  8.830283e-01  ...  0.262009     0.413529        99999
+0  1.32840  1.339948  8.385354e-01  ...  0.261859     0.432343        99999
+8  1.33764  1.354098  7.889575e-01  ...  0.258180     0.454318        99999
+4  1.33496  1.354182  7.898119e-01  ...  0.258158     0.453930        99999
+6  1.29488  1.382069  1.338155e+00  ...  0.251059     0.262329        99999
+5  1.38024  1.382541  6.422771e-01  ...  0.250940     0.526093        99999
+3  1.39944  1.385135  5.827628e-01  ...  0.250290     0.558354        99999
+7  1.47072  1.491915  3.883593e-01  ...  0.224941     0.678169        99999
+9  1.58444  2.522903  8.881784e-16  ...  0.080226     1.000000        99999
+
+[10 rows x 14 columns]
+  0%|          | 0/10 [00:00<?, ?trial/s, best loss=?] 10%|█         | 1/10 [00:09<01:23,  9.29s/trial, best loss: 1.325598068220024] 20%|██        | 2/10 [00:15<01:00,  7.53s/trial, best loss: 1.325598068220024] 30%|███       | 3/10 [00:24<00:56,  8.06s/trial, best loss: 1.325598068220024] 40%|████      | 4/10 [00:26<00:35,  5.88s/trial, best loss: 1.325598068220024] 50%|█████     | 5/10 [00:32<00:29,  5.90s/trial, best loss: 1.3223308109087148] 60%|██████    | 6/10 [00:41<00:27,  6.96s/trial, best loss: 1.3223308109087148] 70%|███████   | 7/10 [00:45<00:17,  6.00s/trial, best loss: 1.3223308109087148] 80%|████████  | 8/10 [00:49<00:10,  5.29s/trial, best loss: 1.3214668080681486] 90%|█████████ | 9/10 [00:57<00:06,  6.26s/trial, best loss: 1.3214668080681486]100%|██████████| 10/10 [01:05<00:00,  6.63s/trial, best loss: 1.3214668080681486]100%|██████████| 10/10 [01:05<00:00,  6.54s/trial, best loss: 1.3214668080681486]
+LGBM       rmse      loss   tr_loss  ...  geo_mean  geo_mean_tr  dataset_size
+7  1.30836  1.321467  1.171722  ...  0.266744     0.309833         99999
+4  1.29792  1.322331  1.182518  ...  0.266513     0.306506         99999
+8  1.28804  1.322499  1.207924  ...  0.266469     0.298817         99999
+6  1.29912  1.323840  1.208107  ...  0.266111     0.298762         99999
+5  1.27880  1.324702  1.227645  ...  0.265882     0.292982         99999
+0  1.28192  1.325598  1.227870  ...  0.265644     0.292916         99999
+2  1.33192  1.327886  1.070671  ...  0.265037     0.342778         99999
+9  1.33928  1.329666  1.070806  ...  0.264566     0.342732         99999
+3  1.27684  1.333971  1.270041  ...  0.263429     0.280820         99999
+1  1.27128  1.334769  1.272162  ...  0.263219     0.280225         99999
+
+[10 rows x 12 columns]
